@@ -2,8 +2,7 @@
 
 Exploratory feasibility study on whether GAN-generated, perceptually-filtered
 mammograms improve a downstream classifier — evaluated under a **leakage-free,
-reproducible protocol**. This repository is a full rework that addresses the
-IBERAMIA 2026 reviews; the authoritative design lives in
+reproducible protocol**. The authoritative design lives in
 [`METHODOLOGY.md`](METHODOLOGY.md).
 
 > **Framing.** This is an *exploratory feasibility study*, not evidence of
