@@ -44,7 +44,7 @@ src/breastsynth/          installable package
 configs/                  default.yaml (hold-out) · foldwise.yaml
 scripts/                  00_build_manifest … 05_make_tables · run_all.sh · run_foldwise.py
 tests/                    leakage guarantees + statistics sanity
-paper/lncs/               Springer LNCS paper (IBERAMIA resubmission)
+paper/lncs/               Springer LNCS paper
 paper/tcc/                ABNTeX2 monograph (Portuguese), revised
 data/                     dataset128/ (553 sample images) · dataset.csv · ckpt400.pth (LFS)
 legacy/                   original prototype scripts (kept for reference)
