@@ -6,9 +6,6 @@ Classification"*. It is the authoritative reference for both the code
 (`src/breastsynth`) and the papers (`paper/lncs`, `paper/tcc`). If code and
 paper ever disagree, this file wins; update it first.
 
-The design was rewritten to address the IBERAMIA 2026 reviews. Each design
-choice below is tagged with the reviewer concern it resolves.
-
 ---
 
 ## 0. Framing (Reviewer 1 — clinical claims; Reviewer 2 — novelty)
