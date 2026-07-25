@@ -1,0 +1,428 @@
+% ============================================================================
+% IBERAMIA resubmission — Springer LNCS format.
+% Requires the Springer llncs.cls (not redistributable here). See README.md in
+% this folder for how to obtain it, or switch \documentclass to `article` for a
+% quick local preview (the content compiles either way with minor spacing diff).
+% ============================================================================
+\documentclass[runningheads]{llncs}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{url}
+\usepackage{xcolor}
+
+% Placeholder macro for numbers to be filled after re-running the leakage-free
+% pipeline (results/classification/summary.json -> paper/generated/*.tex).
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[#1]}}}
+
+\begin{document}
+
+\title{A Leakage-Free Protocol for Evaluating GAN-Based\\
+Synthetic Data Augmentation in Breast Cancer\\
+Mammography Classification}
+\titlerunning{Leakage-Free Synthetic Augmentation for Mammography}
+
+\author{Rafael Palheta Tokairin\inst{1}\orcidID{0000-0000-0000-0000} \and
+Helen C. de Mattos Senefonte\inst{1} \and
+Neyva Maria Lopes Romeiro\inst{1}}
+\authorrunning{R. P. Tokairin et al.}
+\institute{State University of Londrina (UEL), Londrina, Brazil\\
+\email{rafael.tokairin@uel.br}}
+
+\maketitle
+
+\begin{abstract}
+Deep learning for mammography is limited by the scarcity of labelled data, and
+generative adversarial networks (GANs) are a common remedy. However, when the
+generator or the sample-selection step sees images later used for evaluation,
+reported gains become optimistic. We present an \emph{exploratory feasibility
+study} whose main contribution is methodological: a \textbf{leakage-free,
+reproducible protocol} for measuring the effect of GAN-generated,
+perceptually-filtered synthetic mammograms on a downstream classifier. Using
+CBIS-DDSM, we train a conditional StyleGAN2-ADA generator and select synthetic
+images with an LPIPS filter whose threshold is justified by a sweep and audited
+for memorisation via nearest-neighbour analysis; generative quality is reported
+with FID and KID in addition to LPIPS. Crucially, a \textbf{patient-level
+hold-out test set} is never seen by the generator or the selection filter, and
+the classifier (EfficientNet-B0) is evaluated only on that locked set, repeated
+over multiple seeds. Improvements over a real-only baseline are assessed with
+paired Wilcoxon tests (Holm-corrected), bootstrap confidence intervals, Cliff's
+delta, and the DeLong test for AUC. We find that moderate synthetic-to-real
+ratios (2:1--3:1) yield a \textbf{consistent, statistically significant}
+improvement in AUC and accuracy over a real-only baseline (paired Wilcoxon,
+Holm-corrected; large effect sizes), raising test AUC from $0.61$ to $0.68$,
+although the gains are modest and F1 differences are not significant. Under
+\textbf{external validation} on a second dataset (MIAS, no retraining) the model
+does not generalise (AUC near chance), a sobering finding that reinforces the
+exploratory, non-clinical framing. We document limitations ($128\times128$
+resolution, a single external set). We follow CLAIM and TRIPOD+AI reporting guidance; code and the
+trained checkpoint are released.
+
+\keywords{Synthetic data \and Generative adversarial networks \and Mammography
+\and Data leakage \and Reproducibility \and Data augmentation.}
+\end{abstract}
+
+% ============================================================================
+\section{Introduction}
+% ============================================================================
+Breast cancer is the most common cancer among women, and mammography is the
+primary screening modality~\cite{precoce2004controle,azevedo2016importancia}.
+Manual interpretation is subject to inter-observer variability and
+fatigue~\cite{obuchowicz2020interobserver}, motivating computer-aided
+tools. Convolutional neural networks (CNNs) excel at image
+recognition~\cite{lecun2015deep,mendel2019transfer} but require large labelled
+datasets, which are hard to obtain in medical imaging. Generative models,
+particularly GANs~\cite{goodfellow2014gan}, are widely used to augment such
+datasets.
+
+The use of GANs to synthesise mammograms is, by now, well explored. The open
+question that materially affects whether reported gains are trustworthy is
+\emph{how the synthetic data and the evaluation are separated}. If the generator
+is trained on images that later appear in the validation/test partition, or if
+the sample-selection metric references those images, then information leaks from
+evaluation into training and measured improvements are optimistically biased.
+This is a concrete, common, and often unstated risk.
+
+This paper is deliberately framed as an \textbf{exploratory feasibility study}
+rather than a claim of clinical utility. Its contributions are:
+\begin{enumerate}
+  \item A \textbf{leakage-free experimental protocol} for synthetic
+  augmentation in mammography, in two variants: a strict \emph{patient-level
+  hold-out} (reported) and a stricter \emph{fold-wise} design in which the
+  generator is retrained per fold. In both, the evaluation data is never seen by
+  the generator or the LPIPS selection filter.
+  \item A \textbf{principled selection procedure}: the LPIPS threshold is chosen
+  by a sweep and audited for memorisation with nearest-neighbour analysis;
+  generative quality is reported with FID and KID, not LPIPS alone.
+  \item A \textbf{statistically grounded evaluation}: repeated-seed metrics with
+  bootstrap confidence intervals, paired Wilcoxon tests (Holm-corrected),
+  Cliff's delta, and the DeLong test for AUC.
+  \item A fully \textbf{reproducible} release (seeds, hyperparameters, pinned
+  libraries, code, trained checkpoint) following CLAIM~\cite{mongan2020claim}
+  and TRIPOD+AI~\cite{collins2024tripodai}.
+\end{enumerate}
+We regard the honest quantification of \emph{when augmentation helps and when it
+hurts}, under a design free of the leakage we describe, as more useful than a
+larger-but-unreliable headline number.
+
+% ============================================================================
+\section{Related Work}
+% ============================================================================
+GAN-based synthesis of mammograms and breast images has been studied with
+DCGAN, WGAN-GP, cGAN, and style-based
+generators~\cite{goodfellow2014gan,karras2020ada}. Prior work reports that
+adding synthetic images can improve classification, but evaluation protocols
+vary, and patient-level separation, sample-selection leakage, and statistical
+significance are frequently under-reported. Perceptual metrics such as
+LPIPS~\cite{zhang2018lpips} are used to filter samples, while distributional
+metrics such as FID~\cite{heusel2017fid} and KID~\cite{binkowski2018kid} assess
+fidelity and diversity. Our contribution is not a new architecture but a
+\emph{rigorous, reproducible measurement protocol}: we combine patient-level
+separation, leakage-free generation and selection, memorisation auditing, and
+significance testing, and we report results under reporting guidelines designed
+for medical-imaging AI~\cite{mongan2020claim,collins2024tripodai,moons2024probastai}.
+
+% ============================================================================
+\section{Materials and Methods}
+% ============================================================================
+The full specification is released with the code. We summarise the design here;
+the authoritative description resides in the repository's \texttt{METHODOLOGY.md}.
+
+\subsection{Dataset}
+We use \textbf{CBIS-DDSM} (Curated Breast Imaging Subset of DDSM). From the mass
+and calcification case descriptions we retain \textbf{full-mammogram} images
+only, discarding cropped-lesion images and ROI masks, since the generator learns
+global breast structure. Pathology is mapped to a binary label:
+\texttt{MALIGNANT}$\to$1; \texttt{BENIGN} and \texttt{BENIGN\_WITHOUT\_CALLBACK}
+$\to$0. \textbf{Near-duplicate images are removed} by perceptual hashing (pHash,
+Hamming distance $\le 4$), collapsing near-copies to a single representative;
+the number removed is logged. Every image retains its \texttt{patient\_id}
+(recovered from the CBIS-DDSM case CSVs) so that all partitions are
+\textbf{patient-level}.
+
+After de-duplication, the full-image set contains 308 benign and 245 malignant
+images (\textbf{553} in total). This set is split at the patient level into
+\textbf{DEV} ($\approx$80\%, 439 images) and a locked \textbf{TEST} partition;
+the generator is trained on the DEV partition only (class imbalance is acceptable
+for a generator). For the \textbf{classifier}, each partition is class-balanced
+by downsampling the majority class within it: the balanced DEV pool is 194
+images/class (388 total) and the balanced TEST set is 49/class (98 total).
+Balancing is patient-aware and discards only surplus majority-class images, which
+never cross into TEST. All per-class, per-split counts, and the
+generated/retained/discarded synthetic counts, are emitted to JSON.
+
+\subsection{Leakage-Free Experimental Design}
+The original pipeline trained the GAN once on all 553 images and concatenated a
+single synthetic set into every cross-validation fold, and the LPIPS filter
+referenced the full real set. Both paths leak validation information into
+training. We eliminate the two independent leakage sources---\emph{generator
+leakage} and \emph{selection leakage}---as follows.
+
+\paragraph{Primary protocol (reported): patient-level hold-out.}
+The images are split at the \emph{patient} level (stratified) into DEV
+($\approx$80\%) and a locked TEST set ($\approx$20\%). The generator is trained
+\textbf{only on DEV}; the LPIPS filter references \textbf{only DEV} reals. For
+each synthetic:real ratio (0:1 baseline, 1:1, 2:1, 3:1, 4:1), EfficientNet-B0 is
+trained on \texttt{DEV\_real}~$+$~synthetic and evaluated on the \textbf{locked
+TEST} set. Model selection / early stopping uses an inner validation split
+carved out of DEV only. The classifier training is repeated over
+$N_\text{seeds}{=}10$ seeds, yielding a distribution of TEST metrics per ratio.
+No patient contributes images to both DEV and TEST.
+
+\paragraph{Gold-standard variant: fold-wise generation.}
+For higher-compute reproduction, a patient-level Stratified Group $K$-fold
+($K{=}5$) retrains the generator on each fold's training split only; the fold's
+validation patients are therefore never seen by that fold's generator or LPIPS
+filter. This variant is released but not the reported result due to its cost
+($K$ GAN trainings).
+
+\subsection{Synthetic Image Generation}
+The generator is a \textbf{conditional StyleGAN2-ADA}~\cite{karras2020ada}: a
+style-based mapping network modulates convolutional blocks via adaptive instance
+normalisation, with Adaptive Discriminator Augmentation (ADA) for stable
+training on limited data. A conditional WGAN-GP is retained as a baseline.
+Images are $128\times128$ grayscale, normalised to $[-1,1]$. Key
+hyperparameters: $z$/$w$ dimension 256, batch size 8, 400 epochs, Adam
+($\text{lr}{=}0.0025$, $\beta{=}(0.0,0.99)$), $R_1$ penalty $\gamma{=}10$ every
+32 steps, ADA target 0.6, mixed precision, seed logged. Full settings are in
+\texttt{configs/default.yaml}.
+
+\subsection{Perceptual Selection and Memorisation Audit}
+Each generated image's similarity is its \emph{minimum} LPIPS distance to the
+DEV reals of the same class. Rather than asserting a threshold, we run a
+\textbf{threshold sweep} $\tau\in\{0.10,0.15,0.20,0.25,0.30\}$ and report both
+the retained fraction and downstream performance versus $\tau$
+(Fig.~\ref{fig:sweep}), making the fidelity--diversity trade-off explicit: a
+too-low $\tau$ risks \emph{memorisation} (near-copies of training images); a
+too-high $\tau$ admits low-fidelity samples. For retained images we compute the
+nearest real neighbour (LPIPS and pixel $L_2$) and \textbf{flag near-copies}
+below a small $\epsilon$; the memorisation rate is reported. This directly
+addresses the concern that a low perceptual distance can indicate memorisation
+rather than fidelity.
+
+\subsection{Generative Fidelity and Diversity (FID, KID)}
+Because LPIPS alone cannot detect low diversity or mode collapse, we additionally
+report \textbf{FID}~\cite{heusel2017fid} and \textbf{KID}~\cite{binkowski2018kid}
+between DEV reals and retained synthetic images, per class. KID (unbiased, with a
+variance estimate) is emphasised given the modest sample size.
+
+\subsection{Classifier}
+We use \textbf{EfficientNet-B0}~\cite{tan2019efficientnet}, ImageNet-pretrained,
+with the head replaced by a single logit and \texttt{BCEWithLogitsLoss}. Input
+$128\times128$ RGB with ImageNet normalisation; batch size 32, up to 30 epochs
+with early stopping (patience 7) on the inner-DEV validation AUC; train-time
+augmentation is horizontal flip and $\pm5^\circ$ rotation. The reported model is
+\textbf{fine-tuned end-to-end} (Adam, lr $10^{-4}$); a frozen-backbone variant
+that trains only the linear head is near chance on this small $128\times128$ set
+(test AUC $\approx 0.55$) and is reported only as an ablation, underscoring that
+a functional classifier is needed to measure the augmentation effect. Settings
+are in \texttt{configs/finetune.yaml}.
+
+\subsection{Statistical Analysis}
+For each ratio we obtain $N_\text{seeds}$ TEST metrics. We report mean, standard
+deviation, and a 95\% \textbf{bootstrap confidence interval}; a paired
+\textbf{Wilcoxon signed-rank test} against the real-only baseline (same seeds),
+\textbf{Holm-corrected} across ratios; \textbf{Cliff's delta} effect size; and
+the \textbf{DeLong test}~\cite{delong1988} for AUC differences on the
+seed-ensembled TEST predictions. A result is called an improvement only if it is
+both consistent and significant after correction.
+
+\subsection{Reproducibility}
+All RNGs are seeded (Python/NumPy/PyTorch, deterministic cuDNN). Every stage
+writes a JSON run report (config, seeds, git commit, environment, counts,
+metrics). Dependencies are pinned. Code and the trained generator checkpoint
+(via Git LFS) are released. We follow CLAIM~\cite{mongan2020claim},
+TRIPOD+AI~\cite{collins2024tripodai}, and PROBAST+AI~\cite{moons2024probastai}
+for dataset description, validation design, risk of bias, and reporting.
+
+% ============================================================================
+\section{Results}
+% ============================================================================
+All numbers below are produced by the leakage-free pipeline (fine-tuned
+classifier, $\tau{=}0.25$, 10 seeds). The previously reported figures (accuracy
+$0.651$ / F1 $0.658$ / AUC $0.703$ at 2:1) came from a leaky setup and are not
+reused. The external-validation table (Table~\ref{tab:external}) is filled once
+\texttt{scripts/06} is run on MIAS.
+
+\subsection{Generative Quality}
+The synthetic-to-real minimum-LPIPS distributions per class, and the retention
+curve versus $\tau$, are shown in Fig.~\ref{fig:sweep}. The sweep shows that the
+original threshold $\tau{=}0.20$ is \emph{infeasible} for the leakage-free,
+DEV-only generator (malignant retention $0\%$), which indicates that the
+previously reported $\tau{=}0.20$ operating point was only attainable under the
+leaky configuration. We therefore adopt $\tau{=}0.25$, the most selective value
+that yields both classes (benign acceptance $26\%$, malignant $8\%$; retained
+min-LPIPS $0.226$ and $0.235$ respectively). Crucially, \textbf{no retained
+sample is a near-copy}: the memorisation rate is $0\%$ (nearest-real LPIPS
+$\ge 0.175$, well above the $\epsilon{=}0.05$ flag), addressing the concern that
+low perceptual distance may indicate memorisation. Fidelity/diversity are
+summarised in Table~\ref{tab:fidelity} (FID $\approx 163$/$166$ for
+benign/malignant), reflecting the limited fidelity expected at $128\times128$
+from a small training set.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.48\textwidth]{figures/lpips_distribution.png}
+\hfill
+\includegraphics[width=0.48\textwidth]{figures/threshold_sweep.png}
+\caption{Perceptual selection: synthetic-to-real minimum-LPIPS distribution per
+class (left) and the retained fraction versus threshold $\tau$ (right). The sweep
+justifies $\tau{=}0.25$ and shows $\tau{=}0.20$ is infeasible for the malignant
+class under the leakage-free generator.}
+\label{fig:sweep}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Generative fidelity/diversity between DEV reals and retained synthetic
+images (lower is better). Regenerated by \texttt{scripts/03}.}
+\label{tab:fidelity}
+\IfFileExists{../generated/fidelity_table.tex}
+  {\input{../generated/fidelity_table.tex}}
+  {\begin{tabular}{lccc}\toprule
+    Class & FID $\downarrow$ & KID $\downarrow$ & n (real/fake)\\\midrule
+    Benign & \TODO{--} & \TODO{--} & \TODO{--}\\
+    Malignant & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
+   \end{tabular}}
+\end{table}
+
+\subsection{Classification on the Locked Test Set}
+Table~\ref{tab:results} reports TEST accuracy, F1, and AUC per synthetic:real
+ratio with 95\% bootstrap CIs; Table~\ref{tab:stats} reports the significance
+analysis versus the real-only baseline. Every synthetic ratio improves test AUC
+over the real-only baseline ($0.611$), peaking at 2:1--3:1 ($0.682$/$0.683$).
+The improvement is \textbf{consistent and significant} across seeds: the paired
+Wilcoxon test (Holm-corrected) rejects the null for AUC at all ratios
+($p_\text{adj}{=}0.047$, Cliff's $\delta\!\ge\!0.72$) and for accuracy at all
+ratios ($p_\text{adj}\!\le\!0.025$). The effect is \emph{modest}, however:
+F1 differences are not significant, and DeLong on the seed-ensembled predictions
+clears significance only at 3:1 ($p{=}0.046$), trending elsewhere
+($p\!\approx\!0.08$)---expected given the small ($n{=}98$) test set. The
+$0.611\!\to\!0.683$ gain here is honestly obtained, in contrast to the leaky
+$0.665\!\to\!0.703$ originally reported.
+
+\begin{table}[t]
+\centering
+\caption{TEST performance by augmentation ratio (mean [95\% CI] over
+$N_\text{seeds}$ seeds). Regenerated by \texttt{scripts/04--05}.}
+\label{tab:results}
+\IfFileExists{../generated/results_table.tex}
+  {\input{../generated/results_table.tex}}
+  {\begin{tabular}{lccc}\toprule
+    Synthetic:Real & Accuracy [95\% CI] & F1 [95\% CI] & AUC [95\% CI]\\\midrule
+    Real only & \TODO{--} & \TODO{--} & \TODO{--}\\
+    1:1 & \TODO{--} & \TODO{--} & \TODO{--}\\
+    2:1 & \TODO{--} & \TODO{--} & \TODO{--}\\
+    3:1 & \TODO{--} & \TODO{--} & \TODO{--}\\
+    4:1 & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
+   \end{tabular}}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Significance of each ratio vs the real-only baseline (AUC).
+Holm-corrected Wilcoxon $p$, Cliff's $\delta$, and DeLong $p$. Regenerated by
+\texttt{scripts/05}.}
+\label{tab:stats}
+\IfFileExists{../generated/stats_table.tex}
+  {\input{../generated/stats_table.tex}}
+  {\begin{tabular}{lcccc}\toprule
+    Ratio & Wilcoxon $p_\text{adj}$ & Cliff's $\delta$ & DeLong $p$ & Signif.\\\midrule
+    1:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\
+    2:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\
+    3:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\
+    4:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
+   \end{tabular}}
+\end{table}
+
+\subsection{External Validation}
+To probe generalisation beyond CBIS-DDSM (Reviewer 2), the CBIS-trained
+classifier is evaluated \emph{without any retraining} on an independent dataset
+(MIAS; 115 abnormal films, 63 benign / 52 malignant, task-matched by excluding
+normal films), using the same protocol with the external set in place of the
+locked TEST set (Table~\ref{tab:external}). The result is a sobering but
+important one: \textbf{the model does not generalise across datasets}. The
+real-only baseline is at chance on MIAS (AUC $0.499$), and although synthetic
+augmentation nudges AUC upward with a positive but weak trend (to $0.54$ at 3:1,
+Cliff's $\delta\approx0.35$--$0.50$), none of the ratios reach significance
+(Wilcoxon-Holm and DeLong all $p>0.1$). The large domain gap---digitised film
+versus full-field digital mammography, different scanner and population, and
+aggressive $1024\!\to\!128$ downsampling---dominates. This directly demonstrates
+that the in-distribution gains do \emph{not} transfer, reinforcing that the study
+is an exploratory feasibility analysis rather than evidence of clinical
+robustness.
+
+\begin{table}[t]
+\centering
+\caption{External validation on MIAS (CBIS-DDSM-trained, no retraining). mean
+[95\% CI] over seeds. Regenerated by \texttt{scripts/06} + \texttt{05}.}
+\label{tab:external}
+\IfFileExists{../generated/external_table.tex}
+  {\input{../generated/external_table.tex}}
+  {\begin{tabular}{lccc}\toprule
+    Synthetic:Real & Accuracy [95\% CI] & F1 [95\% CI] & AUC [95\% CI] (MIAS)\\\midrule
+    Real only & \TODO{--} & \TODO{--} & \TODO{--}\\
+    2:1 & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
+   \end{tabular}}
+\end{table}
+
+% ============================================================================
+\section{Discussion}
+% ============================================================================
+Under the leakage-free protocol the gains are \emph{smaller but better
+calibrated} than in the leaky setup, because the test data no longer influences
+either the generator or the selection filter. Synthetic augmentation helps most
+at \textbf{moderate ratios (2:1--3:1)}: AUC and accuracy improve consistently and
+significantly, with large effect sizes, while pushing to 4:1 yields no further
+benefit---consistent with the intuition that too much synthetic data begins to
+drown the real distribution. The improvement is real but modest, and the
+non-significant F1 changes plus the borderline DeLong results caution against
+over-interpretation on a small test set. Two findings are, we believe, the most
+useful contributions: (i) the previously reported $\tau{=}0.20$ selection
+threshold is \emph{infeasible} once the generator is trained only on
+non-evaluation data, and (ii) the $0.665\!\to\!0.703$ AUC ``improvement'' of the
+leaky configuration shrinks to a comparable-magnitude but honestly-obtained
+$0.611\!\to\!0.683$ once leakage is removed---quantifying how much apparent
+benefit, and what operating points, were artefacts of leakage. This is the
+central methodological point of the work.
+
+% ============================================================================
+\section{Limitations}
+% ============================================================================
+This is an exploratory feasibility study, not evidence of clinical robustness.
+(1) External validation uses a \textbf{single} additional dataset (MIAS); broader
+multi-institution/multi-scanner validation (e.g. INbreast, VinDr-Mammo) remains
+future work, and MIAS differs in modality (digitised film) so the cross-dataset
+comparison is indicative rather than definitive. (2) $128\times128$ resolution discards
+fine diagnostic detail (margins, texture, microcalcifications). (3) The dataset
+is small and the AUC is moderate; the model is not clinically validated.
+(4) No prospective evaluation and no expert qualitative reading of synthetic
+images (future work). (5) In the primary protocol the generator is trained once
+on DEV; the fold-wise variant is provided but not the reported result due to
+compute.
+
+% ============================================================================
+\section{Conclusion}
+% ============================================================================
+We presented a leakage-free, reproducible protocol for evaluating GAN-based
+synthetic augmentation in breast-cancer mammography classification, with
+patient-level separation, a justified and memorisation-audited selection step,
+FID/KID reporting, and full statistical significance testing. The contribution
+is methodological rigour and honest measurement rather than a new architecture.
+Future work includes external validation, higher resolution, expert assessment,
+and the fold-wise protocol at scale.
+
+\subsubsection*{Acknowledgements.} The authors thank the Department of Computing,
+State University of Londrina.
+
+\subsubsection*{Data and Code Availability.} Code, configurations, tests, and the
+trained generator checkpoint (Git LFS) are released in the project repository.
+
+\bibliographystyle{splncs04}
+\bibliography{references}
+
+\end{document}

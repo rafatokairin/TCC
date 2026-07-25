@@ -1,0 +1,21 @@
+# Fine-tuning variant: UNFREEZE the EfficientNet-B0 backbone (train end-to-end)
+# instead of only the linear head. The frozen-head baseline sat near chance
+# (AUC ~0.545); fine-tuning should give a more meaningful classifier so the
+# effect of synthetic augmentation is measured on a functional model.
+#
+# Uses the SAME data/split/selection defaults as configs/default.yaml (seed 42,
+# 20% patient-level hold-out), so the DEV/TEST partition is identical and the
+# already-generated synthetic images (results/synthetic, tau=0.25) are reused.
+# Only classifier training changes.
+
+classifier:
+  arch: efficientnet_b0
+  pretrained: true
+  freeze_features: false     # <-- fine-tune the whole backbone
+  image_size: 128
+  batch_size: 32
+  epochs: 30
+  lr: 0.0001                 # smaller LR for stable full-model fine-tuning
+  early_stopping_patience: 7
+  inner_val_size: 0.2
+  ratios: [0.0, 1.0, 2.0, 3.0, 4.0]

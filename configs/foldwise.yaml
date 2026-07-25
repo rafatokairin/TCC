@@ -1,0 +1,14 @@
+# Gold-standard fold-wise protocol: the GAN is RETRAINED on each fold's training
+# split only. Expensive (K GAN trainings) but removes leakage by construction.
+# Inherit-and-override the defaults you care about; unspecified sections fall
+# back to dataclass defaults (see src/breastsynth/config.py).
+results_dir: results
+
+split:
+  protocol: foldwise
+  n_folds: 5
+  n_seeds: 3          # fewer seeds since each fold already retrains the GAN
+  seed: 42
+
+classifier:
+  ratios: [0.0, 1.0, 2.0, 3.0, 4.0]

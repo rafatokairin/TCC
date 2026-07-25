@@ -1,0 +1,20 @@
+# Fast end-to-end sanity run (NOT for reporting). Validates that every stage of
+# the pipeline works on your GPU in minutes, before the multi-hour full run with
+# configs/default.yaml. Numbers from this config are meaningless.
+results_dir: results_smoke
+
+gan:
+  epochs: 5          # full run uses 400
+
+split:
+  n_seeds: 2         # full run uses 10
+
+selection:
+  threshold: 0.70          # very lax: a 5-epoch GAN is far from real, so we only
+  threshold_sweep: [0.5, 0.6, 0.7]  # check the plumbing, not image quality
+  max_attempts_factor: 20  # cap rejection sampling so smoke never grinds
+  n_reference_reals: 40    # fewer reference reals -> much faster LPIPS in smoke
+
+classifier:
+  epochs: 3          # full run uses 30
+  ratios: [0.0, 1.0, 2.0]

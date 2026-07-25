@@ -1,0 +1,63 @@
+# Default configuration — leakage-free hold-out protocol (the reported setup).
+# Every field here is logged into results/<run_id>/report.json for reproducibility.
+results_dir: results
+
+data:
+  manifest: data/manifest.csv
+  image_root: data/dataset128
+  image_size: 128
+  dedup_threshold: 4
+  balance_target_per_class: 245   # downsample benign to malignant count -> 490 balanced
+  patient_column: patient_id
+  label_column: label
+
+split:
+  protocol: holdout               # holdout (reported) | foldwise (gold standard)
+  test_size: 0.20                 # patient-level, stratified hold-out TEST
+  n_folds: 5                      # inner CV folds (holdout) / outer folds (foldwise)
+  n_seeds: 10                     # repeated classifier trainings for significance
+  seed: 42
+
+gan:
+  arch: stylegan2ada
+  z_dim: 256
+  w_dim: 256
+  n_classes: 2
+  base_ch: 32
+  batch_size: 8
+  epochs: 400
+  lr_g: 0.0025
+  lr_d: 0.0025
+  beta1: 0.0
+  beta2: 0.99
+  r1_gamma: 10.0
+  r1_interval: 32
+  ada_target: 0.6
+  ada_speed: 0.01
+  mixed_precision: true
+  seed: 0
+
+selection:
+  lpips_net: alex
+  # Operating point chosen from the threshold sweep on THIS (leakage-free, DEV-only)
+  # generator: tau=0.20 is infeasible (malignant retention 0%); tau=0.25 is the most
+  # selective value that yields both classes (benign 23%, malignant 8%); tau=0.30 is
+  # a higher-volume alternative (~64% both). No memorised near-copies at any tau.
+  threshold: 0.25
+  threshold_sweep: [0.10, 0.15, 0.20, 0.25, 0.30]
+  similarity: min
+  n_reference_reals: 100
+  memorization_eps: 0.05
+  max_attempts_factor: 50
+
+classifier:
+  arch: efficientnet_b0
+  pretrained: true
+  freeze_features: true
+  image_size: 128
+  batch_size: 32
+  epochs: 30
+  lr: 0.001
+  early_stopping_patience: 7
+  inner_val_size: 0.2
+  ratios: [0.0, 1.0, 2.0, 3.0, 4.0]   # synthetic:real (0 = real-only baseline)
