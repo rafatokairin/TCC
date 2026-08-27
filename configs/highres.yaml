@@ -1,0 +1,62 @@
+# Higher-resolution, higher-capacity run for Colab (A100). Targets a
+# better generator (lower FID) to test whether higher-fidelity synthetic
+# mammograms improve the downstream classifier under the SAME leakage-free,
+# patient-level protocol. Requires data/dataset256 (built by
+# scripts/build_highres_dataset.py from CBIS-DDSM full mammograms).
+results_dir: results_highres
+
+data:
+  manifest: data/manifest.csv        # same patient-level manifest (image_ids reused)
+  image_root: data/dataset256
+  image_size: 256
+  dedup_threshold: 4
+  balance_target_per_class: 245
+  patient_column: patient_id
+  label_column: label
+
+split:
+  protocol: holdout
+  test_size: 0.20
+  n_folds: 5
+  n_seeds: 10
+  seed: 42
+
+gan:
+  arch: stylegan2ada
+  image_size: 256          # 256x256 output (vs 128)
+  z_dim: 512               # full-size latent (vs reduced 256)
+  w_dim: 512
+  n_classes: 2
+  base_ch: 128             # much higher capacity (vs 32) — needs A100 VRAM
+  batch_size: 16           # A100 can hold a larger batch at 256
+  epochs: 800              # train longer for fidelity
+  lr_g: 0.0025
+  lr_d: 0.0025
+  beta1: 0.0
+  beta2: 0.99
+  r1_gamma: 10.0
+  r1_interval: 16
+  ada_target: 0.6
+  ada_speed: 0.01
+  mixed_precision: true
+  seed: 0
+
+selection:
+  lpips_net: alex
+  threshold: 0.30          # re-tune from the highres sweep before the final run
+  threshold_sweep: [0.15, 0.20, 0.25, 0.30, 0.35]
+  n_reference_reals: 100
+  memorization_eps: 0.05
+  max_attempts_factor: 50
+
+classifier:
+  arch: efficientnet_b0
+  pretrained: true
+  freeze_features: false   # fine-tune, as in the reported protocol
+  image_size: 256
+  batch_size: 32
+  epochs: 30
+  lr: 0.0001
+  early_stopping_patience: 7
+  inner_val_size: 0.2
+  ratios: [0.0, 1.0, 2.0, 3.0, 4.0]

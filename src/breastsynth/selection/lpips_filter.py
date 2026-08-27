@@ -67,6 +67,11 @@ def generate_and_filter(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Clear any previously-retained samples so a low-yield run can never silently
+    # reuse stale images from an earlier run/config.
+    for old in list(out_dir.glob("BENIGN_*.png")) + list(out_dir.glob("MALIGNANT_*.png")):
+        old.unlink()
+
     report: dict = {"threshold": cfg.threshold, "per_class": {}}
     for class_label, refs in reference_by_class.items():
         name = _CLASS_NAMES.get(class_label, str(class_label))

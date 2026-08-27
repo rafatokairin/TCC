@@ -119,7 +119,7 @@ def build_generator(cfg) -> Generator:
         num_classes=cfg.n_classes,
         out_chan=1,
         base_ch=cfg.base_ch,
-        target_size=128,
+        target_size=getattr(cfg, "image_size", 128),
     )
 
 

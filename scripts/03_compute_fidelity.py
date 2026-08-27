@@ -35,7 +35,9 @@ def main():
         if not real_paths or not fake_paths:
             print(f"[skip] {name}: real={len(real_paths)} fake={len(fake_paths)}")
             continue
-        results[name] = compute_fid_kid(real_paths, fake_paths, device=args.device)
+        results[name] = compute_fid_kid(
+            real_paths, fake_paths, device=args.device, image_size=cfg.data.image_size
+        )
         print(f"{name}: FID={results[name]['fid']:.2f}  "
               f"KID={results[name]['kid_mean']:.4f}±{results[name]['kid_std']:.4f}")
 

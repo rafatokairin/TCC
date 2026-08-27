@@ -10,6 +10,8 @@ one side of a split.
 """
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
@@ -25,14 +27,23 @@ def load_manifest(cfg: Config, drop_duplicates: bool = True) -> pd.DataFrame:
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Manifest missing columns: {sorted(missing)}")
-    if "path" not in df.columns:
-        # Reconstruct from image_root by matching stems (portable manifests).
-        from breastsynth.data.manifest import list_images
 
-        idx = list_images(cfg.data.image_root)
-        df["path"] = df["image_id"].map(idx)
-        if df["path"].isna().any():
-            raise ValueError("Some image_ids have no file under image_root; cannot resolve paths.")
+    # `image_root` is authoritative: always resolve `path` from the configured
+    # image directory (by image_id stem), overriding any stored path column. This
+    # lets the SAME manifest drive different resolutions (e.g. dataset128 vs
+    # dataset256) purely via config, and prevents silently reading the wrong set.
+    from breastsynth.data.manifest import list_images
+
+    idx = list_images(cfg.data.image_root)
+    df["path"] = df["image_id"].map(idx)
+    n_missing = int(df["path"].isna().sum())
+    if n_missing:
+        warnings.warn(
+            f"{n_missing}/{len(df)} manifest image_ids have no file under "
+            f"'{cfg.data.image_root}'; dropping them.",
+            stacklevel=2,
+        )
+        df = df.dropna(subset=["path"])
     return df.reset_index(drop=True)
 
 

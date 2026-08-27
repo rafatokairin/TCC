@@ -163,8 +163,14 @@ def _map_patient_from_dicom_info(csv_path: str | Path, known_ids: set[str]) -> d
     for _, r in df.iterrows():
         img_id = _extract_image_id(r[uid_col], known_ids)
         pid = r.get(patient_col)
-        if img_id is not None and pid is not None and not (isinstance(pid, float) and pd.isna(pid)):
-            mapping.setdefault(img_id, str(pid))
+        if img_id is None or pid is None or (isinstance(pid, float) and pd.isna(pid)):
+            continue
+        # In CBIS-DDSM `dicom_info.csv` the PatientID field is the per-image case
+        # name (e.g. 'Mass-Training_P_01265_RIGHT_MLO_1'); the real subject is the
+        # embedded 'P_#####'. Extract it so images of the same patient share an id
+        # (essential for patient-level splitting); fall back to the raw value.
+        m = _PATIENT_RE.search(str(pid))
+        mapping.setdefault(img_id, m.group(1) if m else str(pid))
     return mapping
 
 

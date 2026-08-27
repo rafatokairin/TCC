@@ -114,13 +114,20 @@ pytest -q          # proves no patient overlap / no TEST leakage; validates stat
 
 ---
 
-## Important notes on the numbers
+## Headline finding (negative result)
 
-The previously reported figures (accuracy 0.651 / F1 0.658 / AUC 0.703 at 2:1)
-were produced under the leaky setup and are **not** reused. All tables in the
-papers are regenerated from `results/` after a leakage-free run; until then they
-show `\TODO{}` placeholders. Under the corrected protocol, expect gains to be
-smaller and better calibrated.
+Under the rigorous, **patient-level, leakage-free** protocol with a fine-tuned
+classifier, GAN-based synthetic augmentation provides **no measurable benefit**:
+the real-only baseline (test AUC **0.663**) is the best configuration and no
+augmented ratio differs significantly from it (Holm-corrected Wilcoxon
+`p_adj = 1.0`); external validation on MIAS is likewise null. As an ablation,
+switching to an **image-level** split (same-patient leakage) recovers a
+"significant" 0.611 → 0.683 gain — showing the improvements commonly reported are
+methodological **artefacts**, not an effect of the synthetic data. The generator
+fidelity is limited (FID ≈ 200), so the null result is conditional on that; a
+higher-fidelity, higher-resolution generator is the main future-work avenue. The
+originally reported figures (0.651 / 0.658 / 0.703 at 2:1) came from the leaky,
+image-level setup and are **not** reused.
 
 ## Data & privacy
 

@@ -8,6 +8,17 @@
 # already-generated synthetic images (results/synthetic, tau=0.25) are reused.
 # Only classifier training changes.
 
+selection:
+  lpips_net: alex
+  # Operating point from the sweep on the PATIENT-LEVEL generator: tau<=0.25 is
+  # infeasible (benign retention <1%); tau=0.30 yields both classes (benign 7%,
+  # malignant 19%). No memorised near-copies (min LPIPS ~0.23 >> 0.05).
+  threshold: 0.30
+  threshold_sweep: [0.15, 0.20, 0.25, 0.30, 0.35]
+  n_reference_reals: 100
+  memorization_eps: 0.05
+  max_attempts_factor: 50
+
 classifier:
   arch: efficientnet_b0
   pretrained: true

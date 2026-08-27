@@ -75,7 +75,7 @@ def train_stylegan2ada(
     {'gen','disc','gen_opt','disc_opt','epoch','config'} so it is fully
     reloadable and self-describing.
     """
-    img_size = 128
+    img_size = getattr(cfg, "image_size", 128)
     ds = _GrayDataset(paths, labels, img_size)
     loader = DataLoader(
         ds, batch_size=cfg.batch_size, shuffle=True, num_workers=2,

@@ -39,6 +39,7 @@ class SplitConfig:
 @dataclass
 class GanConfig:
     arch: str = "stylegan2ada"            # "stylegan2ada" | "wgan_gp"
+    image_size: int = 128                 # generator output resolution (128/256/512)
     z_dim: int = 256
     w_dim: int = 256
     n_classes: int = 2
@@ -60,7 +61,7 @@ class GanConfig:
 @dataclass
 class SelectionConfig:
     lpips_net: str = "alex"
-    threshold: float = 0.20               # operating point (justified by sweep)
+    threshold: float = 0.25               # operating point (justified by sweep; 0.20 infeasible)
     threshold_sweep: list[float] = field(
         default_factory=lambda: [0.10, 0.15, 0.20, 0.25, 0.30]
     )

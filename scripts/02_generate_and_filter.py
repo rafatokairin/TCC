@@ -37,6 +37,10 @@ def main():
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--pool-per-class", type=int, default=1000)
     ap.add_argument("--skip-sweep", action="store_true")
+    ap.add_argument("--auto-threshold", action="store_true",
+                    help="pick tau automatically from the sweep (smallest feasible for both classes)")
+    ap.add_argument("--min-retention", type=float, default=0.05,
+                    help="min per-class retained fraction required by --auto-threshold")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -67,6 +71,24 @@ def main():
         print("Threshold sweep:")
         for tau, v in sweep["sweep"].items():
             print(f"  tau={tau}: retained fraction={v['overall_retained_fraction']:.3f}")
+
+        if args.auto_threshold:
+            # Pick the smallest (most selective) tau whose per-class retention is
+            # feasible for BOTH classes, so the operating point adapts to the
+            # generator without a human re-reading the sweep.
+            chosen = None
+            for tau in sorted(cfg.selection.threshold_sweep):
+                pc = sweep["sweep"][str(tau)]["per_class"]
+                if all(c["retained_fraction"] >= args.min_retention for c in pc.values()):
+                    chosen = tau
+                    break
+            if chosen is None:
+                chosen = max(cfg.selection.threshold_sweep)
+                print(f"[auto] no tau reaches {args.min_retention:.0%} for both classes; "
+                      f"using the largest swept tau={chosen}")
+            else:
+                print(f"[auto] selected tau={chosen} (>= {args.min_retention:.0%} retention both classes)")
+            cfg.selection.threshold = chosen
 
     # How many synthetic per class do we need? Enough for the largest ratio.
     max_ratio = max(cfg.classifier.ratios)

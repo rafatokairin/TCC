@@ -46,6 +46,7 @@ def compute_fid_kid(
     device: str = "cuda",
     batch_size: int = 32,
     kid_subset_size: int = 50,
+    image_size: int = 128,
 ) -> dict:
     """Compute FID and KID between two image sets.
 
@@ -59,9 +60,14 @@ def compute_fid_kid(
     subset = min(kid_subset_size, len(real_paths), len(fake_paths))
     kid = KernelInceptionDistance(subset_size=subset, normalize=False).to(device)
 
+    def feed(metric, paths, real):
+        loader = DataLoader(_ImageFolderList(paths, size=image_size), batch_size=batch_size)
+        for batch in loader:
+            metric.update(batch.to(device), real=real)
+
     for metric in (fid, kid):
-        _feed(metric, real_paths, device, batch_size, real=True)
-        _feed(metric, fake_paths, device, batch_size, real=False)
+        feed(metric, real_paths, real=True)
+        feed(metric, fake_paths, real=False)
 
     kid_mean, kid_std = kid.compute()
     return {

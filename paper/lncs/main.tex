@@ -21,10 +21,10 @@
 
 \begin{document}
 
-\title{A Leakage-Free Protocol for Evaluating GAN-Based\\
-Synthetic Data Augmentation in Breast Cancer\\
-Mammography Classification}
-\titlerunning{Leakage-Free Synthetic Augmentation for Mammography}
+\title{Do GAN-Based Synthetic Mammograms Really Help?\\
+A Leakage-Free, Patient-Level Evaluation for\\
+Breast Cancer Classification}
+\titlerunning{Do Synthetic Mammograms Really Help? A Leakage-Free Evaluation}
 
 \author{Rafael Palheta Tokairin\inst{1}\orcidID{0000-0000-0000-0000} \and
 Helen C. de Mattos Senefonte\inst{1} \and
@@ -49,18 +49,21 @@ for memorisation via nearest-neighbour analysis; generative quality is reported
 with FID and KID in addition to LPIPS. Crucially, a \textbf{patient-level
 hold-out test set} is never seen by the generator or the selection filter, and
 the classifier (EfficientNet-B0) is evaluated only on that locked set, repeated
-over multiple seeds. Improvements over a real-only baseline are assessed with
+over multiple seeds. Effects relative to a real-only baseline are assessed with
 paired Wilcoxon tests (Holm-corrected), bootstrap confidence intervals, Cliff's
-delta, and the DeLong test for AUC. We find that moderate synthetic-to-real
-ratios (2:1--3:1) yield a \textbf{consistent, statistically significant}
-improvement in AUC and accuracy over a real-only baseline (paired Wilcoxon,
-Holm-corrected; large effect sizes), raising test AUC from $0.61$ to $0.68$,
-although the gains are modest and F1 differences are not significant. Under
-\textbf{external validation} on a second dataset (MIAS, no retraining) the model
-does not generalise (AUC near chance), a sobering finding that reinforces the
-exploratory, non-clinical framing. We document limitations ($128\times128$
-resolution, a single external set). We follow CLAIM and TRIPOD+AI reporting guidance; code and the
-trained checkpoint are released.
+delta, and the DeLong test for AUC. Our central finding is a cautionary,
+\textbf{negative} one: under this rigorous protocol, GAN-based augmentation
+\textbf{does not improve} classification---the real-only baseline (test AUC
+$0.663$) is statistically indistinguishable from, and numerically above, every
+augmented ratio ($0.639$--$0.655$; no Holm-corrected comparison is significant).
+\textbf{External validation} on a second dataset (MIAS, no retraining) confirms
+the model does not generalise (AUC near chance) and augmentation does not help
+there either. We show that the apparent gains reported under weaker
+protocols---and reproduced in our own leaky, image-level ablations
+($0.66\!\to\!0.70$)---\textbf{vanish} once patient-level separation and
+leakage-free generation/selection are enforced, and we relate this to the
+limited fidelity of the generator (FID $\approx 200$). We follow CLAIM and
+TRIPOD+AI reporting guidance; code and the trained checkpoint are released.
 
 \keywords{Synthetic data \and Generative adversarial networks \and Mammography
 \and Data leakage \and Reproducibility \and Data augmentation.}
@@ -88,26 +91,29 @@ evaluation into training and measured improvements are optimistically biased.
 This is a concrete, common, and often unstated risk.
 
 This paper is deliberately framed as an \textbf{exploratory feasibility study}
-rather than a claim of clinical utility. Its contributions are:
+and reports a \textbf{negative, cautionary result}. Its contributions are:
 \begin{enumerate}
   \item A \textbf{leakage-free experimental protocol} for synthetic
   augmentation in mammography, in two variants: a strict \emph{patient-level
   hold-out} (reported) and a stricter \emph{fold-wise} design in which the
   generator is retrained per fold. In both, the evaluation data is never seen by
   the generator or the LPIPS selection filter.
-  \item A \textbf{principled selection procedure}: the LPIPS threshold is chosen
-  by a sweep and audited for memorisation with nearest-neighbour analysis;
-  generative quality is reported with FID and KID, not LPIPS alone.
-  \item A \textbf{statistically grounded evaluation}: repeated-seed metrics with
-  bootstrap confidence intervals, paired Wilcoxon tests (Holm-corrected),
-  Cliff's delta, and the DeLong test for AUC.
+  \item The empirical finding that, under this protocol, \textbf{GAN-based
+  augmentation does not improve} classification, internally or on an external
+  dataset---and that the gains reported under weaker protocols are recoverable as
+  \emph{artefacts} of data leakage and image-level (non-patient) splitting, which
+  we reproduce and quantify as an ablation.
+  \item A \textbf{principled evaluation} coupling a memorisation-audited,
+  sweep-justified selection step and FID/KID fidelity reporting with
+  statistically grounded testing (bootstrap CIs, Holm-corrected Wilcoxon, Cliff's
+  delta, DeLong).
   \item A fully \textbf{reproducible} release (seeds, hyperparameters, pinned
   libraries, code, trained checkpoint) following CLAIM~\cite{mongan2020claim}
   and TRIPOD+AI~\cite{collins2024tripodai}.
 \end{enumerate}
-We regard the honest quantification of \emph{when augmentation helps and when it
-hurts}, under a design free of the leakage we describe, as more useful than a
-larger-but-unreliable headline number.
+We regard an honest null result, obtained under a design free of the leakage we
+describe, as more useful to the community than a larger-but-unreliable headline
+number.
 
 % ============================================================================
 \section{Related Work}
@@ -189,7 +195,21 @@ Images are $128\times128$ grayscale, normalised to $[-1,1]$. Key
 hyperparameters: $z$/$w$ dimension 256, batch size 8, 400 epochs, Adam
 ($\text{lr}{=}0.0025$, $\beta{=}(0.0,0.99)$), $R_1$ penalty $\gamma{=}10$ every
 32 steps, ADA target 0.6, mixed precision, seed logged. Full settings are in
-\texttt{configs/default.yaml}.
+\texttt{configs/default.yaml}. The conditional generator and discriminator are
+sketched in Fig.~\ref{fig:arch}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[height=3.6cm]{figures/generator.jpg}
+\hfill
+\includegraphics[height=3.6cm]{figures/discriminator.jpg}
+\caption{Conditional StyleGAN2-ADA. Left: the style-based generator maps a latent
+vector concatenated with the class condition through a mapping network and
+AdaIN-modulated blocks. Right: the discriminator receives the (real or synthetic)
+image concatenated with the class condition and applies residual convolutional
+blocks with $R_1$ regularisation and ADA.}
+\label{fig:arch}
+\end{figure}
 
 \subsection{Perceptual Selection and Memorisation Audit}
 Each generated image's similarity is its \emph{minimum} LPIPS distance to the
@@ -242,27 +262,40 @@ for dataset description, validation design, risk of bias, and reporting.
 % ============================================================================
 \section{Results}
 % ============================================================================
-All numbers below are produced by the leakage-free pipeline (fine-tuned
-classifier, $\tau{=}0.25$, 10 seeds). The previously reported figures (accuracy
-$0.651$ / F1 $0.658$ / AUC $0.703$ at 2:1) came from a leaky setup and are not
-reused. The external-validation table (Table~\ref{tab:external}) is filled once
-\texttt{scripts/06} is run on MIAS.
+All numbers below are produced by the leakage-free, patient-level pipeline
+(fine-tuned classifier, $\tau{=}0.30$, 10 seeds). The originally reported figures
+(accuracy $0.651$ / F1 $0.658$ / AUC $0.703$ at 2:1) came from a leaky,
+image-level setup and are not reused.
 
 \subsection{Generative Quality}
-The synthetic-to-real minimum-LPIPS distributions per class, and the retention
-curve versus $\tau$, are shown in Fig.~\ref{fig:sweep}. The sweep shows that the
-original threshold $\tau{=}0.20$ is \emph{infeasible} for the leakage-free,
-DEV-only generator (malignant retention $0\%$), which indicates that the
-previously reported $\tau{=}0.20$ operating point was only attainable under the
-leaky configuration. We therefore adopt $\tau{=}0.25$, the most selective value
-that yields both classes (benign acceptance $26\%$, malignant $8\%$; retained
-min-LPIPS $0.226$ and $0.235$ respectively). Crucially, \textbf{no retained
-sample is a near-copy}: the memorisation rate is $0\%$ (nearest-real LPIPS
-$\ge 0.175$, well above the $\epsilon{=}0.05$ flag), addressing the concern that
-low perceptual distance may indicate memorisation. Fidelity/diversity are
-summarised in Table~\ref{tab:fidelity} (FID $\approx 163$/$166$ for
-benign/malignant), reflecting the limited fidelity expected at $128\times128$
-from a small training set.
+Fig.~\ref{fig:samples} shows real and retained synthetic mammograms for both
+classes: the generator reproduces the global breast shape and coarse tissue
+texture, while fine detail is limited at $128\times128$. The synthetic-to-real
+minimum-LPIPS distributions per class, and the retention curve versus $\tau$, are
+shown in Fig.~\ref{fig:sweep}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\textwidth]{figures/samples_real_vs_synthetic.png}
+\caption{Real (left) versus retained synthetic (right) mammograms produced by the
+leakage-free, patient-level StyleGAN2-ADA generator ($\tau{=}0.30$), for benign
+(top) and malignant (bottom) classes. Global anatomy is reproduced but fine
+detail is limited; no sample is a near-copy of a real image (memorisation
+$0\%$).}
+\label{fig:samples}
+\end{figure} The sweep shows that thresholds $\tau\!\le\!0.25$ are
+\emph{infeasible} for the leakage-free, patient-level generator (benign retention
+$<\!1\%$), so the previously used $\tau{=}0.20$ operating point was only
+attainable under a leakier configuration. We adopt $\tau{=}0.30$, which yields
+both classes (benign acceptance $7\%$, malignant $21\%$; retained min-LPIPS
+$0.282$/$0.277$). \textbf{No retained sample is a near-copy}: the memorisation
+rate is $0\%$ (nearest-real LPIPS $\ge 0.23$, far above the $\epsilon{=}0.05$
+flag). However, distributional fidelity is \emph{limited}---FID
+$\approx 204$ (benign) and $247$ (malignant), with correspondingly high KID
+(Table~\ref{tab:fidelity})---far from the FID $20$--$60$ typical of strong
+mammogram generators, reflecting the difficulty of $128\times128$ synthesis from
+a small, patient-disjoint training set. This limited fidelity is central to
+interpreting the classification results below.
 
 \begin{figure}[t]
 \centering
@@ -271,8 +304,8 @@ from a small training set.
 \includegraphics[width=0.48\textwidth]{figures/threshold_sweep.png}
 \caption{Perceptual selection: synthetic-to-real minimum-LPIPS distribution per
 class (left) and the retained fraction versus threshold $\tau$ (right). The sweep
-justifies $\tau{=}0.25$ and shows $\tau{=}0.20$ is infeasible for the malignant
-class under the leakage-free generator.}
+justifies $\tau{=}0.30$ and shows $\tau\!\le\!0.25$ is infeasible (benign
+retention $<\!1\%$) under the leakage-free, patient-level generator.}
 \label{fig:sweep}
 \end{figure}
 
@@ -281,45 +314,56 @@ class under the leakage-free generator.}
 \caption{Generative fidelity/diversity between DEV reals and retained synthetic
 images (lower is better). Regenerated by \texttt{scripts/03}.}
 \label{tab:fidelity}
-\IfFileExists{../generated/fidelity_table.tex}
-  {\input{../generated/fidelity_table.tex}}
-  {\begin{tabular}{lccc}\toprule
-    Class & FID $\downarrow$ & KID $\downarrow$ & n (real/fake)\\\midrule
-    Benign & \TODO{--} & \TODO{--} & \TODO{--}\\
-    Malignant & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
-   \end{tabular}}
+\begin{tabular}{lccc}
+\toprule
+Class & FID $\downarrow$ & KID $\downarrow$ & n (real/fake) \\
+\midrule
+Benign & 203.5 & 0.198 $\pm$ 0.008 & 244/780 \\
+Malignant & 247.0 & 0.273 $\pm$ 0.012 & 195/780 \\
+\bottomrule
+\end{tabular}
 \end{table}
 
 \subsection{Classification on the Locked Test Set}
 Table~\ref{tab:results} reports TEST accuracy, F1, and AUC per synthetic:real
 ratio with 95\% bootstrap CIs; Table~\ref{tab:stats} reports the significance
-analysis versus the real-only baseline. Every synthetic ratio improves test AUC
-over the real-only baseline ($0.611$), peaking at 2:1--3:1 ($0.682$/$0.683$).
-The improvement is \textbf{consistent and significant} across seeds: the paired
-Wilcoxon test (Holm-corrected) rejects the null for AUC at all ratios
-($p_\text{adj}{=}0.047$, Cliff's $\delta\!\ge\!0.72$) and for accuracy at all
-ratios ($p_\text{adj}\!\le\!0.025$). The effect is \emph{modest}, however:
-F1 differences are not significant, and DeLong on the seed-ensembled predictions
-clears significance only at 3:1 ($p{=}0.046$), trending elsewhere
-($p\!\approx\!0.08$)---expected given the small ($n{=}98$) test set. The
-$0.611\!\to\!0.683$ gain here is honestly obtained, in contrast to the leaky
-$0.665\!\to\!0.703$ originally reported.
+analysis versus the real-only baseline. The result is unambiguous and
+\textbf{negative}: the \emph{real-only} baseline attains the best AUC ($0.663$)
+and accuracy ($0.614$), and \textbf{no augmented ratio improves on it}
+($0.639$--$0.655$ AUC). \textbf{No comparison is statistically significant}: every
+Holm-corrected Wilcoxon test fails to reject ($p_\text{adj}{=}1.0$ for AUC and
+accuracy), effect sizes are negligible or negative (Cliff's $\delta$ from
+$-0.18$ at 1:1 to $+0.12$ at 4:1), and DeLong on the seed-ensembled predictions is
+non-significant throughout ($p\!\ge\!0.12$). The 95\% CIs of all augmented
+conditions overlap the baseline (Fig.~\ref{fig:ratioauc}). At the lowest ratios
+(1:1, 2:1) augmentation even trends slightly \emph{below} baseline, consistent
+with low-fidelity synthetic images diluting the real signal.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/ratio_auc.png}
+\caption{Locked-TEST AUC by synthetic:real ratio (mean over 10 seeds, 95\%
+bootstrap CI). No augmented ratio exceeds the real-only baseline; all confidence
+intervals overlap, and no difference is statistically significant.}
+\label{fig:ratioauc}
+\end{figure}
 
 \begin{table}[t]
 \centering
 \caption{TEST performance by augmentation ratio (mean [95\% CI] over
 $N_\text{seeds}$ seeds). Regenerated by \texttt{scripts/04--05}.}
 \label{tab:results}
-\IfFileExists{../generated/results_table.tex}
-  {\input{../generated/results_table.tex}}
-  {\begin{tabular}{lccc}\toprule
-    Synthetic:Real & Accuracy [95\% CI] & F1 [95\% CI] & AUC [95\% CI]\\\midrule
-    Real only & \TODO{--} & \TODO{--} & \TODO{--}\\
-    1:1 & \TODO{--} & \TODO{--} & \TODO{--}\\
-    2:1 & \TODO{--} & \TODO{--} & \TODO{--}\\
-    3:1 & \TODO{--} & \TODO{--} & \TODO{--}\\
-    4:1 & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
-   \end{tabular}}
+\begin{tabular}{lccc}
+\toprule
+Synthetic:Real & Accuracy [95\% CI] & F1 [95\% CI] & AUC [95\% CI] \\
+\midrule
+\textbf{Real only} & \textbf{0.614} [0.584, 0.647] & \textbf{0.589} [0.552, 0.629] & \textbf{0.663} [0.633, 0.698] \\
+1:1 & 0.592 [0.544, 0.639] & 0.510 [0.386, 0.607] & 0.639 [0.598, 0.672] \\
+2:1 & 0.596 [0.576, 0.615] & 0.551 [0.496, 0.601] & 0.651 [0.630, 0.671] \\
+3:1 & 0.600 [0.584, 0.616] & 0.578 [0.536, 0.613] & 0.655 [0.629, 0.679] \\
+4:1 & 0.589 [0.560, 0.614] & 0.521 [0.463, 0.573] & 0.655 [0.620, 0.684] \\
+\bottomrule
+\end{tabular}
 \end{table}
 
 \begin{table}[t]
@@ -328,15 +372,16 @@ $N_\text{seeds}$ seeds). Regenerated by \texttt{scripts/04--05}.}
 Holm-corrected Wilcoxon $p$, Cliff's $\delta$, and DeLong $p$. Regenerated by
 \texttt{scripts/05}.}
 \label{tab:stats}
-\IfFileExists{../generated/stats_table.tex}
-  {\input{../generated/stats_table.tex}}
-  {\begin{tabular}{lcccc}\toprule
-    Ratio & Wilcoxon $p_\text{adj}$ & Cliff's $\delta$ & DeLong $p$ & Signif.\\\midrule
-    1:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\
-    2:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\
-    3:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\
-    4:1 & \TODO{--} & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
-   \end{tabular}}
+\begin{tabular}{lcccc}
+\toprule
+Ratio & Wilcoxon $p_{\text{adj}}$ (AUC) & Cliff's $\delta$ & DeLong $p$ & Signif. \\
+\midrule
+1:1 & 1.000 & $-0.18$ & 0.513 & no \\
+2:1 & 1.000 & $-0.13$ & 0.151 & no \\
+3:1 & 1.000 & $+0.02$ & 0.124 & no \\
+4:1 & 1.000 & $+0.12$ & 0.349 & no \\
+\bottomrule
+\end{tabular}
 \end{table}
 
 \subsection{External Validation}
@@ -344,77 +389,93 @@ To probe generalisation beyond CBIS-DDSM (Reviewer 2), the CBIS-trained
 classifier is evaluated \emph{without any retraining} on an independent dataset
 (MIAS; 115 abnormal films, 63 benign / 52 malignant, task-matched by excluding
 normal films), using the same protocol with the external set in place of the
-locked TEST set (Table~\ref{tab:external}). The result is a sobering but
-important one: \textbf{the model does not generalise across datasets}. The
-real-only baseline is at chance on MIAS (AUC $0.499$), and although synthetic
-augmentation nudges AUC upward with a positive but weak trend (to $0.54$ at 3:1,
-Cliff's $\delta\approx0.35$--$0.50$), none of the ratios reach significance
-(Wilcoxon-Holm and DeLong all $p>0.1$). The large domain gap---digitised film
-versus full-field digital mammography, different scanner and population, and
-aggressive $1024\!\to\!128$ downsampling---dominates. This directly demonstrates
-that the in-distribution gains do \emph{not} transfer, reinforcing that the study
-is an exploratory feasibility analysis rather than evidence of clinical
-robustness.
+locked TEST set (Table~\ref{tab:external}). The outcome matches the internal
+one and is again \textbf{negative}: the model barely exceeds chance on MIAS
+(real-only AUC $0.533$), and augmentation \emph{does not help}---every augmented
+ratio sits at or below chance ($0.492$--$0.503$) and below the real-only
+baseline, with no significant difference (Wilcoxon-Holm $p\!\ge\!0.078$). The
+large domain gap---digitised film versus full-field digital mammography,
+different scanner and population, and aggressive $1024\!\to\!128$
+downsampling---means the CBIS-trained model does not transfer, and synthetic
+augmentation provides no robustness to it. This reinforces that the study is an
+exploratory feasibility analysis, not evidence of clinical robustness.
 
 \begin{table}[t]
 \centering
 \caption{External validation on MIAS (CBIS-DDSM-trained, no retraining). mean
 [95\% CI] over seeds. Regenerated by \texttt{scripts/06} + \texttt{05}.}
 \label{tab:external}
-\IfFileExists{../generated/external_table.tex}
-  {\input{../generated/external_table.tex}}
-  {\begin{tabular}{lccc}\toprule
-    Synthetic:Real & Accuracy [95\% CI] & F1 [95\% CI] & AUC [95\% CI] (MIAS)\\\midrule
-    Real only & \TODO{--} & \TODO{--} & \TODO{--}\\
-    2:1 & \TODO{--} & \TODO{--} & \TODO{--}\\\bottomrule
-   \end{tabular}}
+\begin{tabular}{lccc}
+\toprule
+Synthetic:Real & Accuracy [95\% CI] & F1 [95\% CI] & AUC [95\% CI] (MIAS) \\
+\midrule
+Real only & 0.542 [0.520, 0.563] & 0.455 [0.404, 0.499] & 0.533 [0.512, 0.554] \\
+1:1 & 0.519 [0.502, 0.536] & 0.347 [0.261, 0.433] & 0.497 [0.479, 0.517] \\
+2:1 & 0.514 [0.485, 0.543] & 0.394 [0.298, 0.485] & 0.503 [0.468, 0.538] \\
+3:1 & 0.509 [0.489, 0.524] & 0.390 [0.300, 0.467] & 0.492 [0.474, 0.510] \\
+4:1 & 0.522 [0.503, 0.541] & 0.325 [0.231, 0.404] & 0.500 [0.474, 0.525] \\
+\bottomrule
+\end{tabular}
 \end{table}
 
 % ============================================================================
 \section{Discussion}
 % ============================================================================
-Under the leakage-free protocol the gains are \emph{smaller but better
-calibrated} than in the leaky setup, because the test data no longer influences
-either the generator or the selection filter. Synthetic augmentation helps most
-at \textbf{moderate ratios (2:1--3:1)}: AUC and accuracy improve consistently and
-significantly, with large effect sizes, while pushing to 4:1 yields no further
-benefit---consistent with the intuition that too much synthetic data begins to
-drown the real distribution. The improvement is real but modest, and the
-non-significant F1 changes plus the borderline DeLong results caution against
-over-interpretation on a small test set. Two findings are, we believe, the most
-useful contributions: (i) the previously reported $\tau{=}0.20$ selection
-threshold is \emph{infeasible} once the generator is trained only on
-non-evaluation data, and (ii) the $0.665\!\to\!0.703$ AUC ``improvement'' of the
-leaky configuration shrinks to a comparable-magnitude but honestly-obtained
-$0.611\!\to\!0.683$ once leakage is removed---quantifying how much apparent
-benefit, and what operating points, were artefacts of leakage. This is the
-central methodological point of the work.
+Under the leakage-free, patient-level protocol, GAN-based augmentation provides
+\textbf{no measurable benefit}: the real-only baseline is the strongest
+configuration and no augmented ratio is significantly different from it, whether
+evaluated internally or on MIAS. This contrasts sharply with the positive
+outcome we obtain under a weaker protocol. As an ablation we reran the identical
+pipeline with \emph{image-level} rather than patient-level splitting (so
+same-patient views may straddle train and test): this recovers a
+``significant'' improvement of AUC $0.611\!\to\!0.683$ at 2:1--3:1
+(Holm-corrected Wilcoxon $p_\text{adj}{=}0.047$)---the kind of result commonly
+reported. The gain is therefore attributable to \emph{methodology}, not to the
+synthetic data: same-patient leakage across the split alone flips the conclusion
+from null to significant. Two further observations support the null result: (i) the previously
+used $\tau{=}0.20$ selection threshold is \emph{infeasible} once the generator
+sees only non-evaluation data (benign retention $<\!1\%$), so it was itself an
+artefact of a leakier configuration; and (ii) generator fidelity is limited
+(FID $\approx 200$), so the retained synthetic images plausibly lack the
+discriminative structure needed to help---at the lowest ratios they even trend
+below baseline. We do not claim synthetic augmentation \emph{cannot} help
+mammography classification; we show that, with a moderate-fidelity generator and
+under rigorous evaluation, the commonly reported gains do not reproduce, and that
+demonstrating a genuine benefit requires both higher-fidelity synthesis and
+leakage-free, patient-level evaluation.
 
 % ============================================================================
 \section{Limitations}
 % ============================================================================
-This is an exploratory feasibility study, not evidence of clinical robustness.
-(1) External validation uses a \textbf{single} additional dataset (MIAS); broader
-multi-institution/multi-scanner validation (e.g. INbreast, VinDr-Mammo) remains
-future work, and MIAS differs in modality (digitised film) so the cross-dataset
-comparison is indicative rather than definitive. (2) $128\times128$ resolution discards
-fine diagnostic detail (margins, texture, microcalcifications). (3) The dataset
-is small and the AUC is moderate; the model is not clinically validated.
-(4) No prospective evaluation and no expert qualitative reading of synthetic
-images (future work). (5) In the primary protocol the generator is trained once
-on DEV; the fold-wise variant is provided but not the reported result due to
-compute.
+This is an exploratory feasibility study reporting a negative result, not
+evidence of clinical robustness. (1) The \textbf{generator fidelity is limited}
+(FID $\approx 200$); our null finding is conditional on this---a higher-fidelity
+generator might yield synthetic images that do help, and testing this is the main
+avenue for future work. (2) $128\times128$ resolution discards fine diagnostic
+detail (margins, texture, microcalcifications) and constrains generator quality.
+(3) External validation uses a \textbf{single} additional dataset (MIAS,
+digitised film); broader multi-institution/multi-scanner validation (INbreast,
+VinDr-Mammo) remains future work. (4) The dataset is small and both baseline and
+augmented AUCs are moderate; the model is not clinically validated, and no
+prospective or expert evaluation was performed. (5) The generator is trained once
+on DEV in the reported protocol; the fold-wise variant is provided but not run at
+scale due to compute.
 
 % ============================================================================
 \section{Conclusion}
 % ============================================================================
-We presented a leakage-free, reproducible protocol for evaluating GAN-based
-synthetic augmentation in breast-cancer mammography classification, with
-patient-level separation, a justified and memorisation-audited selection step,
-FID/KID reporting, and full statistical significance testing. The contribution
-is methodological rigour and honest measurement rather than a new architecture.
-Future work includes external validation, higher resolution, expert assessment,
-and the fold-wise protocol at scale.
+We presented a leakage-free, patient-level protocol for evaluating GAN-based
+synthetic augmentation in breast-cancer mammography classification, with a
+justified, memorisation-audited selection step, FID/KID reporting, and full
+statistical testing. Under this protocol the augmentation provides \textbf{no
+significant benefit}, internally or externally, and we show that the positive
+gains reported under weaker protocols are recoverable as artefacts of data
+leakage and image-level splitting. The contribution is a cautionary,
+reproducible demonstration that evaluation rigour---not the presence of synthetic
+data---drives the reported improvements, and that a genuine benefit would require
+both higher-fidelity synthesis and leakage-free, patient-level evaluation. Future
+work: higher-resolution, higher-fidelity generators; multi-scanner external
+validation; and the fold-wise protocol at scale.
 
 \subsubsection*{Acknowledgements.} The authors thank the Department of Computing,
 State University of Londrina.
