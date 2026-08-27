@@ -1,0 +1,62 @@
+# 256px run tuned for a FREE Colab T4 (16 GB). Lighter than configs/highres.yaml
+# (which targets A100/40 GB): smaller base_ch and batch so it fits in memory and
+# finishes within a free session (~2-3 h). The GAN checkpoints every 20 epochs and
+# RESUMES from the checkpoint, so a Colab disconnect does not lose progress —
+# just re-run the training cell and it continues.
+results_dir: results_highres
+
+data:
+  manifest: data/manifest.csv
+  image_root: data/dataset256
+  image_size: 256
+  dedup_threshold: 4
+  balance_target_per_class: 245
+  patient_column: patient_id
+  label_column: label
+
+split:
+  protocol: holdout
+  test_size: 0.20
+  n_folds: 5
+  n_seeds: 10
+  seed: 42
+
+gan:
+  arch: stylegan2ada
+  image_size: 256
+  z_dim: 512
+  w_dim: 512
+  n_classes: 2
+  base_ch: 64          # fits T4 16 GB (A100 config uses 128)
+  batch_size: 8        # drop to 4 if you hit CUDA out-of-memory
+  epochs: 400
+  lr_g: 0.0025
+  lr_d: 0.0025
+  beta1: 0.0
+  beta2: 0.99
+  r1_gamma: 10.0
+  r1_interval: 16
+  ada_target: 0.6
+  ada_speed: 0.01
+  mixed_precision: true
+  seed: 0
+
+selection:
+  lpips_net: alex
+  threshold: 0.30
+  threshold_sweep: [0.15, 0.20, 0.25, 0.30, 0.35]
+  n_reference_reals: 100
+  memorization_eps: 0.05
+  max_attempts_factor: 50
+
+classifier:
+  arch: efficientnet_b0
+  pretrained: true
+  freeze_features: false
+  image_size: 256
+  batch_size: 32
+  epochs: 30
+  lr: 0.0001
+  early_stopping_patience: 7
+  inner_val_size: 0.2
+  ratios: [0.0, 1.0, 2.0, 3.0, 4.0]

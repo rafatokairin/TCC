@@ -68,12 +68,14 @@ def train_stylegan2ada(
     out_ckpt: str | Path,
     device: str = "cuda",
     log_every: int = 50,
+    save_every: int = 20,
 ) -> Path:
     """Train StyleGAN2-ADA on (paths, labels); save checkpoint to `out_ckpt`.
 
-    Returns the checkpoint path. The checkpoint dict contains keys
-    {'gen','disc','gen_opt','disc_opt','epoch','config'} so it is fully
-    reloadable and self-describing.
+    Checkpoints every `save_every` epochs AND resumes from `out_ckpt` if it
+    already exists, so an interrupted run (e.g. a Colab disconnect) continues
+    instead of restarting. The checkpoint dict contains keys
+    {'gen','disc','gen_opt','disc_opt','epoch','config'}.
     """
     img_size = getattr(cfg, "image_size", 128)
     ds = _GrayDataset(paths, labels, img_size)
@@ -89,10 +91,32 @@ def train_stylegan2ada(
     ada = AdaptiveAugment(cfg.ada_target, cfg.ada_speed, device)
     scaler_g, scaler_d = GradScaler(enabled=cfg.mixed_precision), GradScaler(enabled=cfg.mixed_precision)
 
+    out_ckpt = Path(out_ckpt)
+    out_ckpt.parent.mkdir(parents=True, exist_ok=True)
+
+    def save(epoch: int) -> None:
+        torch.save(
+            {
+                "gen": gen.state_dict(), "disc": disc.state_dict(),
+                "gen_opt": opt_g.state_dict(), "disc_opt": opt_d.state_dict(),
+                "epoch": epoch, "config": cfg.__dict__,
+            },
+            out_ckpt,
+        )
+
+    start_epoch = 1
+    if out_ckpt.exists():
+        ck = torch.load(out_ckpt, map_location=device)
+        if ck.get("epoch", cfg.epochs) < cfg.epochs:  # resume only an unfinished run
+            gen.load_state_dict(ck["gen"]); disc.load_state_dict(ck["disc"])
+            opt_g.load_state_dict(ck["gen_opt"]); opt_d.load_state_dict(ck["disc_opt"])
+            start_epoch = ck["epoch"] + 1
+            print(f"Resuming GAN training from epoch {start_epoch}/{cfg.epochs}")
+
     def cond(one_hot):
         return one_hot[:, :, None, None].repeat(1, 1, img_size, img_size)
 
-    for epoch in range(1, cfg.epochs + 1):
+    for epoch in range(start_epoch, cfg.epochs + 1):
         pbar = tqdm(loader, desc=f"GAN epoch {epoch}/{cfg.epochs}")
         for i, (real, lbl) in enumerate(pbar):
             real, lbl = real.to(device), lbl.to(device)
@@ -133,17 +157,8 @@ def train_stylegan2ada(
             if i % log_every == 0:
                 pbar.set_postfix(g=f"{g_loss.item():.3f}", d=f"{d_loss.item():.3f}", ada_p=f"{ada.ada_p:.2f}")
 
-    out_ckpt = Path(out_ckpt)
-    out_ckpt.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "gen": gen.state_dict(),
-            "disc": disc.state_dict(),
-            "gen_opt": opt_g.state_dict(),
-            "disc_opt": opt_d.state_dict(),
-            "epoch": cfg.epochs,
-            "config": cfg.__dict__,
-        },
-        out_ckpt,
-    )
+        if epoch % save_every == 0:
+            save(epoch)  # periodic checkpoint (survives disconnects)
+
+    save(cfg.epochs)
     return out_ckpt
