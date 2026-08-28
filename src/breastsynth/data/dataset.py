@@ -13,16 +13,31 @@ IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
-def build_transforms(image_size: int = 128, train: bool = False) -> T.Compose:
-    """Classifier transforms. Train-time augmentation is flip + small rotation only.
+def build_transforms(image_size: int = 128, train: bool = False, augment: str = "basic") -> T.Compose:
+    """Classifier transforms with selectable train-time augmentation strength.
 
-    Note: mammogram L/R laterality is normalised at manifest time, so we keep
-    augmentation conservative (no aggressive geometric distortion of lesions).
+    augment (train only):
+      * "none"   — no augmentation (resize + normalise only);
+      * "basic"  — horizontal flip + small rotation (the default used throughout);
+      * "strong" — a conventional strong-augmentation recipe (affine translate/
+        scale, wider rotation, photometric jitter, and random erasing / cutout),
+        used as the classic-augmentation baseline against GAN augmentation.
+
+    Laterality is normalised at manifest time, so geometry stays mild-to-moderate.
     """
     ops = [T.Resize((image_size, image_size))]
-    if train:
-        ops += [T.RandomHorizontalFlip(p=0.5), T.RandomRotation(5)]
+    if train and augment != "none":
+        if augment == "strong":
+            ops += [
+                T.RandomHorizontalFlip(p=0.5),
+                T.RandomAffine(degrees=12, translate=(0.06, 0.06), scale=(0.9, 1.1)),
+                T.ColorJitter(brightness=0.15, contrast=0.15),
+            ]
+        else:  # basic
+            ops += [T.RandomHorizontalFlip(p=0.5), T.RandomRotation(5)]
     ops += [T.ToTensor(), T.Normalize(IMAGENET_MEAN, IMAGENET_STD)]
+    if train and augment == "strong":
+        ops += [T.RandomErasing(p=0.25, scale=(0.02, 0.12))]  # cutout
     return T.Compose(ops)
 
 

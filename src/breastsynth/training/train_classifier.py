@@ -19,8 +19,8 @@ from breastsynth.models.classifier import build_classifier, predict_probs
 from breastsynth.seed import worker_init_fn
 
 
-def _loader(paths, labels, cfg, train, seed):
-    ds = MammogramDataset(paths, labels, build_transforms(cfg.image_size, train=train))
+def _loader(paths, labels, cfg, train, seed, augment="basic"):
+    ds = MammogramDataset(paths, labels, build_transforms(cfg.image_size, train=train, augment=augment))
     g = torch.Generator()
     g.manual_seed(seed)
     return DataLoader(
@@ -42,9 +42,13 @@ def train_classifier(
     cfg: ClassifierConfig,
     device: str = "cuda",
     seed: int = 42,
+    augment: str = "basic",
 ) -> tuple[nn.Module, dict]:
-    """Train and return (best_model, history). Selection metric = inner-val AUC."""
-    train_loader = _loader(train_paths, train_labels, cfg, True, seed)
+    """Train and return (best_model, history). Selection metric = inner-val AUC.
+
+    `augment` sets the train-time augmentation strength ('none'|'basic'|'strong').
+    """
+    train_loader = _loader(train_paths, train_labels, cfg, True, seed, augment=augment)
     val_loader = _loader(val_paths, val_labels, cfg, False, seed)
 
     model = build_classifier(cfg.pretrained, cfg.freeze_features, num_outputs=1).to(device)
