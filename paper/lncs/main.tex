@@ -62,7 +62,9 @@ there either. We show that the apparent gains reported under weaker
 protocols---and reproduced in our own leaky, image-level ablations
 ($0.66\!\to\!0.70$)---\textbf{vanish} once patient-level separation and
 leakage-free generation/selection are enforced, and we relate this to the
-limited fidelity of the generator (FID $\approx 200$). We follow CLAIM and
+limited fidelity of the generator (FID $\approx 200$). Additional experiments
+show that GAN augmentation \textbf{does not beat cheap classic augmentation} and
+gives no reliable benefit even in the low-data regime. We follow CLAIM and
 TRIPOD+AI reporting guidance; code and the trained checkpoint are released.
 
 \keywords{Synthetic data \and Generative adversarial networks \and Mammography
@@ -384,6 +386,54 @@ Ratio & Wilcoxon $p_{\text{adj}}$ (AUC) & Cliff's $\delta$ & DeLong $p$ & Signif
 \end{tabular}
 \end{table}
 
+\subsection{GAN vs Classic Augmentation}
+A GAN is an expensive way to augment data, so a fair question (Reviewer 2) is
+whether it beats cheap classic augmentation. Under the same protocol we compare,
+against a \emph{no-augmentation} baseline, (i) classic strong augmentation
+(affine, photometric jitter, cutout), (ii) GAN synthetic at 2:1, and (iii) both
+(Table~\ref{tab:augcompare}). Augmentation of any kind gives only a small,
+non-significant AUC bump over no augmentation ($0.610\to\!\approx\!0.65$), and
+critically \textbf{GAN augmentation ($0.650$) is statistically indistinguishable
+from classic augmentation ($0.649$)}---the GAN buys nothing that a few cheap
+transforms do not, and combining the two does not help. No comparison is
+significant (Holm-corrected Wilcoxon $p_\text{adj}{=}0.58$).
+
+\begin{table}[t]
+\centering
+\caption{Augmentation strategies on the locked TEST set (mean [95\% CI], 10
+seeds). GAN augmentation does not beat classic augmentation; none differs
+significantly from the no-augmentation baseline.}
+\label{tab:augcompare}
+\begin{tabular}{lcccc}
+\toprule
+Condition & Accuracy & F1 & AUC [95\% CI] & vs no-aug \\
+\midrule
+No augmentation & 0.600 & 0.578 & 0.610 [0.568, 0.650] & --- \\
+Classic aug. & 0.577 & 0.500 & 0.649 [0.617, 0.677] & n.s. \\
+GAN 2:1 & 0.598 & 0.575 & 0.650 [0.615, 0.684] & n.s. \\
+Classic + GAN 2:1 & 0.591 & 0.544 & 0.632 [0.590, 0.671] & n.s. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Low-Data Regime}
+Synthetic augmentation is often argued to help most when real data is scarce. We
+subsample the real DEV pool and compare real-only vs GAN 2:1 at each size
+(Fig.~\ref{fig:lc}). The benefit is inconsistent and never significant: the
+largest (still non-significant) gain is at 80 images/class ($\Delta$AUC $+0.052$,
+Cliff's $\delta{=}0.62$, $p{=}0.13$), while at 120/class it is slightly negative
+and at the full size negligible ($+0.004$). There is thus no reliable low-data
+regime in which the GAN helps under rigorous evaluation.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\textwidth]{figures/learning_curve.png}
+\caption{Learning curve: TEST AUC of real-only vs GAN-augmented (2:1) training as
+the real DEV pool is subsampled. The GAN provides no consistent or significant
+benefit at any data size.}
+\label{fig:lc}
+\end{figure}
+
 \subsection{External Validation}
 To probe generalisation beyond CBIS-DDSM (Reviewer 2), the CBIS-trained
 classifier is evaluated \emph{without any retraining} on an independent dataset
@@ -438,11 +488,17 @@ sees only non-evaluation data (benign retention $<\!1\%$), so it was itself an
 artefact of a leakier configuration; and (ii) generator fidelity is limited
 (FID $\approx 200$), so the retained synthetic images plausibly lack the
 discriminative structure needed to help---at the lowest ratios they even trend
-below baseline. We do not claim synthetic augmentation \emph{cannot} help
+below baseline. The augmentation-strategy comparison sharpens the practical
+message: the GAN matches, but does not beat, cheap classic augmentation
+(Table~\ref{tab:augcompare}), so its considerable training cost buys no accuracy;
+and the low-data analysis (Fig.~\ref{fig:lc}) finds no data size at which the GAN
+reliably helps, contrary to the common intuition that synthetic data rescues the
+small-sample regime. We do not claim synthetic augmentation \emph{cannot} help
 mammography classification; we show that, with a moderate-fidelity generator and
-under rigorous evaluation, the commonly reported gains do not reproduce, and that
-demonstrating a genuine benefit requires both higher-fidelity synthesis and
-leakage-free, patient-level evaluation.
+under rigorous evaluation, the commonly reported gains do not reproduce and the
+GAN is not even competitive with trivial augmentation, and that demonstrating a
+genuine benefit requires both higher-fidelity synthesis and leakage-free,
+patient-level evaluation.
 
 % ============================================================================
 \section{Limitations}

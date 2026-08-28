@@ -66,9 +66,11 @@ Mostramos que os ganhos aparentes reportados sob protocolos mais fracos---e
 reproduzidos em nossas próprias ablações com vazamento, em nível de imagem
 ($0.66\!\to\!0.70$)---\textbf{desaparecem} uma vez que a separação em nível de
 paciente e a geração/seleção livres de vazamento são impostas, e relacionamos
-isso à fidelidade limitada do gerador (FID $\approx 200$). Seguimos as diretrizes
-de reporte CLAIM e TRIPOD+AI; o código e o checkpoint treinado são
-disponibilizados.
+isso à fidelidade limitada do gerador (FID $\approx 200$). Experimentos
+adicionais mostram que o aumento por GAN \textbf{não supera o aumento clássico
+simples} e não traz benefício confiável nem mesmo no regime de poucos dados.
+Seguimos as diretrizes de reporte CLAIM e TRIPOD+AI; o código e o checkpoint
+treinado são disponibilizados.
 
 \keywords{Dados sintéticos \and Redes generativas adversárias \and Mamografia
 \and Vazamento de dados \and Reprodutibilidade \and Aumentação de dados.}
@@ -409,6 +411,56 @@ Proporção & Wilcoxon $p_{\text{adj}}$ (AUC) & $\delta$ de Cliff & DeLong $p$ &
 \end{tabular}
 \end{table}
 
+\subsection{GAN vs. Aumento Clássico}
+Uma GAN é uma forma cara de aumentar dados, portanto uma pergunta justa (Revisor
+2) é se ela supera o aumento clássico barato. Sob o mesmo protocolo, comparamos,
+contra uma linha de base \emph{sem aumento}, (i) o aumento clássico forte
+(afim, jitter fotométrico, cutout), (ii) o sintético por GAN em 2:1 e (iii)
+ambos (Tabela~\ref{tab:augcompare}). O aumento de qualquer tipo produz apenas um
+pequeno ganho de AUC, não significativo, sobre a ausência de aumento
+($0.610\to\!\approx\!0.65$), e criticamente \textbf{o aumento por GAN ($0.650$) é
+estatisticamente indistinguível do aumento clássico ($0.649$)}---a GAN não
+compra nada que algumas transformações baratas não comprem, e combinar os dois
+não ajuda. Nenhuma comparação é significativa (Wilcoxon corrigido por Holm
+$p_\text{adj}{=}0.58$).
+
+\begin{table}[t]
+\centering
+\caption{Estratégias de aumento no conjunto TEST bloqueado (média [IC 95\%], 10
+sementes). O aumento por GAN não supera o aumento clássico; nenhuma difere
+significativamente da linha de base sem aumento.}
+\label{tab:augcompare}
+\begin{tabular}{lcccc}
+\toprule
+Condição & Acurácia & F1 & AUC [IC 95\%] & vs sem-aug \\
+\midrule
+Sem aumento & 0.600 & 0.578 & 0.610 [0.568, 0.650] & --- \\
+Aumento clássico & 0.577 & 0.500 & 0.649 [0.617, 0.677] & n.s. \\
+GAN 2:1 & 0.598 & 0.575 & 0.650 [0.615, 0.684] & n.s. \\
+Clássico + GAN 2:1 & 0.591 & 0.544 & 0.632 [0.590, 0.671] & n.s. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Regime de Poucos Dados}
+Frequentemente argumenta-se que o aumento sintético ajuda mais quando os dados
+reais são escassos. Subamostramos o conjunto DEV real e comparamos apenas-real
+vs GAN 2:1 em cada tamanho (Fig.~\ref{fig:lc}). O benefício é inconsistente e
+nunca significativo: o maior ganho (ainda não significativo) ocorre em 80
+imagens/classe ($\Delta$AUC $+0.052$, delta de Cliff $=0.62$, $p{=}0.13$),
+enquanto em 120/classe ele é ligeiramente negativo e, no tamanho completo,
+desprezível ($+0.004$). Não há, portanto, regime de poucos dados no qual a GAN
+ajude de forma confiável sob avaliação rigorosa.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\textwidth]{figures/learning_curve.png}
+\caption{Curva de aprendizado: AUC no TEST de treino apenas-real vs aumentado por
+GAN (2:1) conforme o conjunto DEV real é subamostrado. A GAN não oferece
+benefício consistente ou significativo em nenhum tamanho de dados.}
+\label{fig:lc}
+\end{figure}
+
 \subsection{Validação Externa}
 Para investigar a generalização além do CBIS-DDSM (Revisor 2), o classificador
 treinado no CBIS é avaliado \emph{sem qualquer retreinamento} em um conjunto de
@@ -467,7 +519,13 @@ de modo que ele mesmo era um artefato de uma configuração com mais vazamento; 
 (ii) a fidelidade do gerador é limitada (FID $\approx 200$), de modo que as
 imagens sintéticas retidas plausivelmente carecem da estrutura discriminativa
 necessária para ajudar---nas proporções mais baixas elas até tendem abaixo da
-linha de base. Não afirmamos que a aumentação sintética \emph{não possa} ajudar a
+linha de base. A comparação de estratégias de aumento aguça a mensagem prática: a
+GAN iguala, mas não supera, o aumento clássico barato (Tabela~\ref{tab:augcompare}),
+de modo que seu considerável custo de treinamento não compra acurácia; e a análise
+de poucos dados (Fig.~\ref{fig:lc}) não encontra nenhum tamanho de dados no qual a
+GAN ajude de forma confiável, contrariando a intuição comum de que os dados
+sintéticos resgatam o regime de poucas amostras. Não afirmamos que a aumentação
+sintética \emph{não possa} ajudar a
 classificação de mamografias; mostramos que, com um gerador de fidelidade moderada
 e sob avaliação rigorosa, os ganhos comumente reportados não se reproduzem, e que
 demonstrar um benefício genuíno requer tanto síntese de maior fidelidade quanto
