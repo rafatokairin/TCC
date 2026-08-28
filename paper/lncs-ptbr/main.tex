@@ -22,10 +22,10 @@
 
 \begin{document}
 
-\title{Mamografias Sintéticas Baseadas em GAN Realmente Ajudam?\\
-Uma Avaliação Livre de Vazamento, em Nível de Paciente, para\\
-Classificação de Câncer de Mama}
-\titlerunning{Mamografias Sintéticas Realmente Ajudam? Uma Avaliação Livre de Vazamento}
+\title{Mamografias Sintéticas Realmente Ajudam?\\
+Uma Avaliação com Poder Estatístico e Livre de Vazamento da Aumentação por\\
+GAN e Difusão para Classificação de Câncer de Mama}
+\titlerunning{Mamografias Sintéticas Realmente Ajudam? Uma Avaliação com Poder Estatístico e Livre de Vazamento}
 
 \author{Rafael Palheta Tokairin\inst{1}\orcidID{0000-0000-0000-0000} \and
 Helen C. de Mattos Senefonte\inst{1} \and
@@ -38,42 +38,43 @@ Neyva Maria Lopes Romeiro\inst{1}}
 
 \begin{abstract}
 O aprendizado profundo para mamografia é limitado pela escassez de dados
-rotulados, e as redes generativas adversárias (GANs) são um remédio comum.
-Entretanto, quando o gerador ou a etapa de seleção de amostras vê imagens
-utilizadas posteriormente na avaliação, os ganhos reportados tornam-se
-otimistas. Apresentamos um \emph{estudo exploratório de viabilidade} cuja
-principal contribuição é metodológica: um \textbf{protocolo reprodutível e livre
-de vazamento} para medir o efeito de mamografias sintéticas geradas por GAN e
-filtradas perceptualmente sobre um classificador subsequente. Utilizando o
-CBIS-DDSM, treinamos um gerador condicional StyleGAN2-ADA e selecionamos imagens
-sintéticas com um filtro LPIPS cujo limiar é justificado por uma varredura e
-auditado quanto à memorização por meio de análise de vizinho mais próximo; a
-qualidade generativa é reportada com FID e KID além do LPIPS. Crucialmente, um
-\textbf{conjunto de teste hold-out em nível de paciente} nunca é visto pelo
-gerador ou pelo filtro de seleção, e o classificador (EfficientNet-B0) é avaliado
-apenas nesse conjunto travado, repetido ao longo de múltiplas sementes. Os
-efeitos em relação a uma linha de base apenas com dados reais são avaliados com
-testes de Wilcoxon pareados (com correção de Holm), intervalos de confiança por
-bootstrap, delta de Cliff e o teste de DeLong para a AUC. Nosso achado central é
-cautelar e \textbf{negativo}: sob este protocolo rigoroso, a aumentação baseada
-em GAN \textbf{não melhora} a classificação---a linha de base apenas com dados
-reais (AUC de teste $0.663$) é estatisticamente indistinguível de, e
-numericamente superior a, toda proporção aumentada ($0.639$--$0.655$; nenhuma
-comparação corrigida por Holm é significativa). A \textbf{validação externa} em
-um segundo conjunto de dados (MIAS, sem retreinamento) confirma que o modelo não
-generaliza (AUC próxima do acaso) e que a aumentação também não ajuda ali.
-Mostramos que os ganhos aparentes reportados sob protocolos mais fracos---e
-reproduzidos em nossas próprias ablações com vazamento, em nível de imagem
-($0.66\!\to\!0.70$)---\textbf{desaparecem} uma vez que a separação em nível de
-paciente e a geração/seleção livres de vazamento são impostas, e relacionamos
-isso à fidelidade limitada do gerador (FID $\approx 200$). Experimentos
-adicionais mostram que o aumento por GAN \textbf{não supera o aumento clássico
-simples} e não traz benefício confiável nem mesmo no regime de poucos dados.
-Seguimos as diretrizes de reporte CLAIM e TRIPOD+AI; o código e o checkpoint
-treinado são disponibilizados.
+rotulados, e modelos generativos---GANs e, mais recentemente, modelos de
+difusão---são um remédio comum. Entretanto, quando o gerador ou a etapa de
+seleção de amostras vê imagens utilizadas posteriormente na avaliação, os ganhos
+reportados tornam-se otimistas, e os estudos são frequentemente pequenos demais
+para ter poder estatístico. Apresentamos um \textbf{protocolo com poder
+estatístico, livre de vazamento e em nível de paciente} para medir o efeito de
+mamografias sintéticas sobre um classificador subsequente, e o aplicamos a
+\emph{dois} geradores: um StyleGAN2-ADA condicional e um modelo Stable
+Diffusion 1.5 ajustado por fine-tuning com LoRA. Utilizando o \textbf{CBIS-DDSM
+completo} (2857 imagens de mamografia completa, 1460 pacientes), dividimos em
+nível de paciente em um conjunto de desenvolvimento e um \textbf{conjunto de
+teste travado de 504 imagens} (252/classe, 290 pacientes) nunca visto por
+qualquer gerador ou filtro de seleção, e avaliamos o EfficientNet-B0 ao longo de
+10 sementes. As imagens sintéticas são filtradas perceptualmente por uma
+varredura de LPIPS e auditadas quanto à memorização; a qualidade generativa é
+reportada com FID e KID. Os efeitos em relação a uma linha de base apenas com
+dados reais são avaliados com testes de Wilcoxon pareados corrigidos por Holm,
+intervalos de confiança por bootstrap, delta de Cliff e DeLong. Nosso achado
+central é um \textbf{resultado nulo agnóstico ao gerador}: nem a GAN nem o modelo
+de difusão melhoram a classificação sobre a linha de base apenas com dados reais
+(AUC de teste $0.733$); toda proporção aumentada é estatisticamente
+indistinguível dela. Surpreendentemente, o gerador de difusão é \emph{mais}
+realista (FID $131.3$/$126.1$ vs $158.7$/$171.6$ da GAN), \emph{mais} diverso e
+apresenta \emph{zero} memorização, mas ainda assim não produz benefício
+subsequente---portanto a qualidade do gerador \textbf{não} é o gargalo. A
+\textbf{validação externa} em um segundo conjunto de dados (MIAS, sem
+retreinamento) confirma que o modelo não generaliza (AUC próxima do acaso). Por
+fim, uma ablação de vazamento matizada mostra que o aparente resultado positivo
+requer \emph{tanto} um subconjunto pequeno \emph{quanto} vazamento em nível de
+imagem: no conjunto de dados completo e com poder estatístico, mesmo a divisão
+vazada em nível de imagem é nula. A aumentação por GAN também não supera a
+aumentação clássica barata. Seguimos as diretrizes de reporte CLAIM e TRIPOD+AI;
+o código e os checkpoints treinados são disponibilizados.
 
-\keywords{Dados sintéticos \and Redes generativas adversárias \and Mamografia
-\and Vazamento de dados \and Reprodutibilidade \and Aumentação de dados.}
+\keywords{Dados sintéticos \and Redes generativas adversárias \and Modelos de
+difusão \and Mamografia \and Vazamento de dados \and Reprodutibilidade \and
+Aumentação de dados.}
 \end{abstract}
 
 % ============================================================================
@@ -86,39 +87,47 @@ fadiga~\cite{obuchowicz2020interobserver}, motivando ferramentas auxiliadas por
 computador. As redes neurais convolucionais (CNNs) destacam-se no reconhecimento
 de imagens~\cite{lecun2015deep,mendel2019transfer}, mas exigem grandes conjuntos
 de dados rotulados, difíceis de obter em imagens médicas. Modelos generativos,
-particularmente as GANs~\cite{goodfellow2014gan}, são amplamente utilizados para
-aumentar tais conjuntos de dados.
+particularmente as GANs~\cite{goodfellow2014gan} e, mais recentemente, os modelos
+de difusão~\cite{rombach2022ldm}, são amplamente utilizados para aumentar tais
+conjuntos de dados.
 
-O uso de GANs para sintetizar mamografias é, a esta altura, bem explorado. A
-questão em aberto que afeta materialmente se os ganhos reportados são confiáveis
-é \emph{como os dados sintéticos e a avaliação são separados}. Se o gerador é
-treinado com imagens que posteriormente aparecem na partição de
-validação/teste, ou se a métrica de seleção de amostras faz referência a essas
-imagens, então há vazamento de informação da avaliação para o treinamento e as
-melhorias medidas são otimistamente enviesadas. Este é um risco concreto, comum
-e frequentemente não declarado.
+O uso de modelos generativos para sintetizar mamografias é, a esta altura, bem
+explorado. Duas questões afetam materialmente se os ganhos reportados são
+confiáveis. A primeira é \emph{como os dados sintéticos e a avaliação são
+separados}: se o gerador é treinado com imagens que posteriormente aparecem na
+partição de validação/teste, ou se a métrica de seleção de amostras faz
+referência a essas imagens, então há vazamento de informação da avaliação para o
+treinamento e as melhorias medidas são otimistamente enviesadas. A segunda é o
+\emph{poder estatístico}: muitos estudos avaliam em algumas dezenas de imagens,
+de modo que um ganho aparente pode ser ruído. Ambos os riscos são concretos,
+comuns e frequentemente não declarados.
 
-Este artigo é deliberadamente enquadrado como um \textbf{estudo exploratório de
-viabilidade} e reporta um \textbf{resultado negativo e cautelar}. Suas
-contribuições são:
+Este artigo reporta um \textbf{resultado nulo com poder estatístico e agnóstico
+ao gerador}. Suas contribuições são:
 \begin{enumerate}
-  \item Um \textbf{protocolo experimental livre de vazamento} para aumentação
-  sintética em mamografia, em duas variantes: um \emph{hold-out em nível de
-  paciente} estrito (reportado) e um projeto \emph{por dobra} mais estrito, no
-  qual o gerador é retreinado por dobra. Em ambos, os dados de avaliação nunca
-  são vistos pelo gerador ou pelo filtro de seleção LPIPS.
-  \item O achado empírico de que, sob este protocolo, a \textbf{aumentação
-  baseada em GAN não melhora} a classificação, internamente ou em um conjunto de
-  dados externo---e de que os ganhos reportados sob protocolos mais fracos são
-  recuperáveis como \emph{artefatos} de vazamento de dados e de divisão em nível
-  de imagem (não de paciente), o que reproduzimos e quantificamos como uma
-  ablação.
+  \item Um \textbf{protocolo experimental com poder estatístico e livre de
+  vazamento} para aumentação sintética em mamografia, avaliado no CBIS-DDSM
+  \emph{completo} com um conjunto de teste travado, em nível de paciente, de
+  $504$ imagens. Os dados de avaliação nunca são vistos por qualquer gerador ou
+  pelo filtro de seleção LPIPS.
+  \item Uma \textbf{comparação de dois geradores}: ao lado de um StyleGAN2-ADA
+  condicional, ajustamos por fine-tuning com LoRA o Stable Diffusion 1.5. O
+  achado empírico é que \textbf{nenhum dos geradores melhora} a classificação,
+  internamente ou em um conjunto de dados externo---e, surpreendentemente, que o
+  gerador de difusão é \emph{mais} realista, \emph{mais} diverso e apresenta
+  \emph{zero} memorização, mas ainda assim não produz benefício, de modo que a
+  qualidade do gerador não é o gargalo.
+  \item Uma \textbf{ablação de vazamento matizada} mostrando que o resultado
+  positivo reportado sob protocolos mais fracos requer \emph{tanto} um
+  subconjunto pequeno \emph{quanto} divisão em nível de imagem (não de paciente):
+  no conjunto de dados completo e com poder estatístico, mesmo a divisão vazada é
+  nula.
   \item Uma \textbf{avaliação fundamentada} que acopla uma etapa de seleção
   auditada quanto à memorização e justificada por varredura, além do reporte de
   fidelidade por FID/KID, a testes com embasamento estatístico (ICs por
-  bootstrap, Wilcoxon corrigido por Holm, delta de Cliff, DeLong).
-  \item Uma disponibilização totalmente \textbf{reprodutível} (sementes,
-  hiperparâmetros, bibliotecas fixadas, código, checkpoint treinado) seguindo
+  bootstrap, Wilcoxon corrigido por Holm, delta de Cliff, DeLong),
+  disponibilizada de forma totalmente \textbf{reprodutível} (sementes,
+  hiperparâmetros, bibliotecas fixadas, código, checkpoints treinados) seguindo
   CLAIM~\cite{mongan2020claim} e TRIPOD+AI~\cite{collins2024tripodai}.
 \end{enumerate}
 Consideramos um resultado nulo honesto, obtido sob um projeto livre do vazamento
@@ -130,17 +139,22 @@ não confiável.
 % ============================================================================
 A síntese de mamografias e imagens mamárias baseada em GAN foi estudada com
 DCGAN, WGAN-GP, cGAN e geradores baseados em
-estilo~\cite{goodfellow2014gan,karras2020ada}. Trabalhos anteriores reportam que
-adicionar imagens sintéticas pode melhorar a classificação, mas os protocolos de
-avaliação variam, e a separação em nível de paciente, o vazamento na seleção de
-amostras e a significância estatística são frequentemente sub-reportados.
-Métricas perceptuais como o LPIPS~\cite{zhang2018lpips} são usadas para filtrar
-amostras, enquanto métricas distribucionais como FID~\cite{heusel2017fid} e
-KID~\cite{binkowski2018kid} avaliam fidelidade e diversidade. Nossa contribuição
-não é uma nova arquitetura, mas um \emph{protocolo de medição rigoroso e
-reprodutível}: combinamos separação em nível de paciente, geração e seleção
-livres de vazamento, auditoria de memorização e teste de significância, e
-reportamos resultados sob diretrizes de reporte projetadas para IA em imagens
+estilo~\cite{goodfellow2014gan,karras2020ada}. Mais recentemente, os modelos de
+difusão latente~\cite{rombach2022ldm} tornaram-se o estado da arte em síntese de
+imagens, e o fine-tuning eficiente em parâmetros via LoRA~\cite{hu2022lora} torna
+viável adaptar um grande modelo de difusão pré-treinado em hardware modesto.
+Trabalhos anteriores reportam que adicionar imagens sintéticas pode melhorar a
+classificação, mas os protocolos de avaliação variam, e a separação em nível de
+paciente, o vazamento na seleção de amostras, o poder estatístico e o teste de
+significância são frequentemente sub-reportados. Métricas perceptuais como o
+LPIPS~\cite{zhang2018lpips} são usadas para filtrar amostras, enquanto métricas
+distribucionais como FID~\cite{heusel2017fid} e KID~\cite{binkowski2018kid}
+avaliam fidelidade e diversidade. Nossa contribuição não é uma nova arquitetura,
+mas um \emph{protocolo de medição rigoroso, reprodutível e com poder
+estatístico}: combinamos separação em nível de paciente, geração e seleção livres
+de vazamento, auditoria de memorização e teste de significância ao longo de
+\emph{duas} famílias de geradores (GAN e difusão), e reportamos resultados sob
+diretrizes de reporte projetadas para IA em imagens
 médicas~\cite{mongan2020claim,collins2024tripodai,moons2024probastai}.
 
 % ============================================================================
@@ -162,21 +176,26 @@ registrado. Cada imagem retém seu \texttt{patient\_id} (recuperado dos CSVs de
 casos do CBIS-DDSM) de modo que todas as partições sejam \textbf{em nível de
 paciente}.
 
-Após a de-duplicação, o conjunto de imagens completas contém 308 imagens benignas
-e 245 malignas (\textbf{553} no total). Este conjunto é dividido em nível de
-paciente em \textbf{DEV} ($\approx$80\%, 439 imagens) e uma partição de
-\textbf{TEST} travada; o gerador é treinado apenas na partição DEV (o
-desbalanceamento de classes é aceitável para um gerador). Para o
-\textbf{classificador}, cada partição é balanceada por classe subamostrando a
-classe majoritária dentro dela: o conjunto DEV balanceado é de 194 imagens/classe
-(388 no total) e o conjunto TEST balanceado é de 49/classe (98 no total). O
-balanceamento é ciente do paciente e descarta apenas imagens excedentes da classe
-majoritária, que nunca cruzam para o TEST. Todas as contagens por classe e por
-divisão, bem como as contagens sintéticas geradas/retidas/descartadas, são
-emitidas para JSON.
+Utilizamos o conjunto \textbf{completo} de mamografias completas do CBIS-DDSM:
+\textbf{2857} imagens de \textbf{1460} pacientes (\textbf{1564} benignas /
+\textbf{1293} malignas). A sinalização de quase-duplicatas por hash perceptual
+identifica \textbf{55} quase-cópias. Este conjunto é dividido em nível de
+paciente em \textbf{DEV} (\textbf{2241} imagens, \textbf{1170} pacientes) e uma
+partição \textbf{TEST} travada e balanceada por classe de \textbf{504} imagens
+(\textbf{252/classe}, \textbf{290} pacientes); os geradores são treinados apenas
+na partição DEV (o desbalanceamento de classes é aceitável para um gerador). Para
+o \textbf{classificador}, o conjunto DEV é balanceado por classe subamostrando a
+classe majoritária para um \textbf{conjunto DEV balanceado de 2012 imagens}
+(\textbf{1006/classe}). O balanceamento é ciente do paciente e descarta apenas
+imagens excedentes da classe majoritária, que nunca cruzam para o TEST. Nenhum
+paciente contribui com imagens tanto para DEV quanto para TEST. Todas as
+contagens por classe e por divisão, bem como as contagens sintéticas
+geradas/retidas/descartadas, são emitidas para JSON. Um subconjunto anterior de
+\textbf{553 imagens} do CBIS-DDSM é retido apenas para a ablação de sensibilidade
+a vazamento reportada na Discussão.
 
 \subsection{Projeto Experimental Livre de Vazamento}
-O pipeline original treinava a GAN uma única vez em todas as 553 imagens e
+Um pipeline anterior treinava a GAN uma única vez em um pequeno subconjunto e
 concatenava um único conjunto sintético em cada dobra de validação cruzada, e o
 filtro LPIPS fazia referência ao conjunto real completo. Ambos os caminhos vazam
 informação de validação para o treinamento. Eliminamos as duas fontes
@@ -185,15 +204,16 @@ seleção}---da seguinte forma.
 
 \paragraph{Protocolo primário (reportado): hold-out em nível de paciente.}
 As imagens são divididas em nível de \emph{paciente} (estratificado) em DEV
-($\approx$80\%) e um conjunto de TEST travado ($\approx$20\%). O gerador é
-treinado \textbf{apenas em DEV}; o filtro LPIPS faz referência \textbf{apenas aos
-reais de DEV}. Para cada proporção sintético:real (linha de base 0:1, 1:1, 2:1,
-3:1, 4:1), o EfficientNet-B0 é treinado em \texttt{DEV\_real}~$+$~sintético e
-avaliado no conjunto de \textbf{TEST travado}. A seleção de modelo / parada
-antecipada usa uma divisão interna de validação extraída apenas de DEV. O
-treinamento do classificador é repetido ao longo de $N_\text{seeds}{=}10$
-sementes, produzindo uma distribuição de métricas de TEST por proporção. Nenhum
-paciente contribui com imagens tanto para DEV quanto para TEST.
+($\approx$80\%) e um conjunto de TEST travado ($\approx$20\%, $504$ imagens).
+Cada gerador é treinado \textbf{apenas em DEV}; o filtro LPIPS faz referência
+\textbf{apenas aos reais de DEV}. Para cada proporção sintético:real (linha de
+base 0:1, 1:1, 2:1, 3:1, 4:1), o EfficientNet-B0 é treinado em
+\texttt{DEV\_real}~$+$~sintético e avaliado no conjunto de \textbf{TEST travado}.
+A seleção de modelo / parada antecipada usa uma divisão interna de validação
+extraída apenas de DEV. O treinamento do classificador é repetido ao longo de
+$N_\text{seeds}{=}10$ sementes, produzindo uma distribuição de métricas de TEST
+por proporção. Nenhum paciente contribui com imagens tanto para DEV quanto para
+TEST.
 
 \paragraph{Variante padrão-ouro: geração por dobra.}
 Para reprodução com maior custo computacional, um $K$-fold de Grupo Estratificado
@@ -284,42 +304,33 @@ de validação, risco de viés e reporte.
 % ============================================================================
 \section{Resultados}
 % ============================================================================
-Todos os números abaixo são produzidos pelo pipeline livre de vazamento, em nível
-de paciente (classificador ajustado por fine-tuning, $\tau{=}0.30$, 10 sementes).
-Os números originalmente reportados (acurácia $0.651$ / F1 $0.658$ / AUC $0.703$
-em 2:1) vieram de uma configuração com vazamento, em nível de imagem, e não são
-reutilizados.
+Todos os números abaixo são produzidos pelo pipeline com poder estatístico, livre
+de vazamento e em nível de paciente (classificador ajustado por fine-tuning, 10
+sementes, TEST travado $n{=}504$).
 
 \subsection{Qualidade Generativa}
-A Fig.~\ref{fig:samples} mostra mamografias reais e sintéticas retidas para ambas
-as classes: o gerador reproduz a forma global da mama e a textura grosseira do
-tecido, enquanto o detalhe fino é limitado a $128\times128$. As distribuições de
-LPIPS mínimo sintético-para-real por classe, e a curva de retenção em função de
-$\tau$, são mostradas na Fig.~\ref{fig:sweep}.
+A Fig.~\ref{fig:samples} mostra amostras reais, da GAN e de difusão para ambas as
+classes: a GAN reproduz a forma global da mama e a textura grosseira do tecido,
+enquanto o detalhe fino é limitado a $128\times128$. As distribuições de LPIPS
+mínimo sintético-para-real por classe, e a curva de retenção em função de $\tau$,
+são mostradas na Fig.~\ref{fig:sweep}.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.82\textwidth]{figures/samples_real_vs_synthetic.png}
-\caption{Mamografias reais (esquerda) versus sintéticas retidas (direita)
-produzidas pelo gerador StyleGAN2-ADA livre de vazamento, em nível de paciente
-($\tau{=}0.30$), para as classes benigna (topo) e maligna (base). A anatomia
-global é reproduzida, mas o detalhe fino é limitado; nenhuma amostra é uma
-quase-cópia de uma imagem real (memorização $0\%$).}
+\includegraphics[width=0.82\textwidth]{figures/samples_real_gan_diffusion.png}
+\caption{Amostras reais, da GAN e de difusão (SD+LoRA) para as classes benigna
+(topo) e maligna (base). O gerador de difusão é mais diverso e de menor FID que a
+GAN, mas nenhuma amostra é uma quase-cópia de uma imagem real (memorização $0\%$
+para ambos os geradores).}
 \label{fig:samples}
-\end{figure} A varredura mostra que limiares $\tau\!\le\!0.25$ são
-\emph{inviáveis} para o gerador livre de vazamento, em nível de paciente
-(retenção benigna $<\!1\%$), de modo que o ponto de operação $\tau{=}0.20$
-usado anteriormente só era atingível sob uma configuração com mais vazamento.
-Adotamos $\tau{=}0.30$, que produz ambas as classes (aceitação benigna $7\%$,
-maligna $21\%$; LPIPS mínimo retido $0.282$/$0.277$). \textbf{Nenhuma amostra
-retida é uma quase-cópia}: a taxa de memorização é $0\%$ (LPIPS ao real mais
-próximo $\ge 0.23$, muito acima do limiar de sinalização $\epsilon{=}0.05$).
-Entretanto, a fidelidade distribucional é \emph{limitada}---FID $\approx 204$
-(benigna) e $247$ (maligna), com KID correspondentemente alto
-(Tabela~\ref{tab:fidelity})---longe do FID $20$--$60$ típico de geradores fortes
-de mamografia, refletindo a dificuldade da síntese em $128\times128$ a partir de
-um conjunto de treinamento pequeno e disjunto por paciente. Esta fidelidade
-limitada é central para a interpretação dos resultados de classificação abaixo.
+\end{figure} Para a GAN, adotamos o ponto de operação LPIPS $\tau{=}0.20$, que
+retém imagens de ambas as classes (LPIPS mínimo retido $\approx 0.18$).
+\textbf{Nenhuma amostra retida é uma quase-cópia}: a taxa de memorização é $0\%$,
+muito acima do sinalizador de quase-cópia. A fidelidade distribucional é
+\emph{limitada}---FID $158.7$ (benigna) e $171.6$ (maligna), com KID
+correspondentemente alto (Tabela~\ref{tab:fidelity})---longe do FID $20$--$60$
+típico de geradores fortes de mamografia, refletindo a dificuldade da síntese em
+$128\times128$ a partir de um conjunto de treinamento disjunto por paciente.
 
 \begin{figure}[t]
 \centering
@@ -328,23 +339,23 @@ limitada é central para a interpretação dos resultados de classificação aba
 \includegraphics[width=0.48\textwidth]{figures/threshold_sweep.png}
 \caption{Seleção perceptual: distribuição de LPIPS mínimo sintético-para-real por
 classe (esquerda) e a fração retida em função do limiar $\tau$ (direita). A
-varredura justifica $\tau{=}0.30$ e mostra que $\tau\!\le\!0.25$ é inviável
-(retenção benigna $<\!1\%$) sob o gerador livre de vazamento, em nível de
-paciente.}
+varredura justifica o ponto de operação da GAN $\tau{=}0.20$ sob o gerador livre
+de vazamento, em nível de paciente.}
 \label{fig:sweep}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Fidelidade/diversidade generativas entre os reais de DEV e as imagens
-sintéticas retidas (menor é melhor). Regenerada por \texttt{scripts/03}.}
+\caption{Fidelidade/diversidade generativas da GAN entre os reais de DEV e as
+imagens sintéticas retidas (menor é melhor; seleção da GAN $\tau{=}0.20$,
+memorização $0\%$). Regenerada por \texttt{scripts/03}.}
 \label{tab:fidelity}
 \begin{tabular}{lccc}
 \toprule
 Classe & FID $\downarrow$ & KID $\downarrow$ & n (real/falso) \\
 \midrule
-Benigna & 203.5 & 0.198 $\pm$ 0.008 & 244/780 \\
-Maligna & 247.0 & 0.273 $\pm$ 0.012 & 195/780 \\
+Benigna & 158.7 & 0.175 $\pm$ 0.008 & 1235/4024 \\
+Maligna & 171.6 & 0.197 $\pm$ 0.009 & 1006/4024 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -352,18 +363,16 @@ Maligna & 247.0 & 0.273 $\pm$ 0.012 & 195/780 \\
 \subsection{Classificação no Conjunto de Teste Travado}
 A Tabela~\ref{tab:results} reporta acurácia, F1 e AUC de TEST por proporção
 sintético:real com ICs por bootstrap de 95\%; a Tabela~\ref{tab:stats} reporta a
-análise de significância versus a linha de base apenas com dados reais. O
-resultado é inequívoco e \textbf{negativo}: a linha de base \emph{apenas com
-dados reais} atinge a melhor AUC ($0.663$) e acurácia ($0.614$), e \textbf{nenhuma
-proporção aumentada a supera} (AUC $0.639$--$0.655$). \textbf{Nenhuma comparação é
+análise de significância versus a linha de base apenas com dados reais. No
+conjunto de dados com poder estatístico o resultado é inequívoco e
+\textbf{negativo}: a linha de base \emph{apenas com dados reais} atinge a melhor
+AUC ($0.733$), e \textbf{nenhuma proporção aumentada a melhora de forma
+significativa} (AUC $0.732$--$0.736$). \textbf{Nenhuma comparação é
 estatisticamente significativa}: todo teste de Wilcoxon corrigido por Holm falha
-em rejeitar ($p_\text{adj}{=}1.0$ para AUC e acurácia), os tamanhos de efeito são
-desprezíveis ou negativos ($\delta$ de Cliff de $-0.18$ em 1:1 a $+0.12$ em 4:1),
-e o DeLong nas predições combinadas por ensemble de sementes é não significativo em
-todos os casos ($p\!\ge\!0.12$). Os ICs de 95\% de todas as condições aumentadas
-se sobrepõem à linha de base (Fig.~\ref{fig:ratioauc}). Nas proporções mais baixas
-(1:1, 2:1) a aumentação até tende ligeiramente \emph{abaixo} da linha de base,
-consistente com imagens sintéticas de baixa fidelidade diluindo o sinal real.
+em rejeitar ($p_\text{adj}{=}1.000$), os tamanhos de efeito são desprezíveis
+($\delta$ de Cliff de $-0.18$ em 2:1 a $+0.16$ em 4:1), e as condições aumentadas
+diferem da linha de base apenas dentro do ruído. Os ICs de 95\% de todas as
+condições aumentadas se sobrepõem à linha de base (Fig.~\ref{fig:ratioauc}).
 
 \begin{figure}[t]
 \centering
@@ -384,11 +393,11 @@ $N_\text{seeds}$ sementes). Regenerada por \texttt{scripts/04--05}.}
 \toprule
 Sintético:Real & Acurácia [IC 95\%] & F1 [IC 95\%] & AUC [IC 95\%] \\
 \midrule
-\textbf{Apenas reais} & \textbf{0.614} [0.584, 0.647] & \textbf{0.589} [0.552, 0.629] & \textbf{0.663} [0.633, 0.698] \\
-1:1 & 0.592 [0.544, 0.639] & 0.510 [0.386, 0.607] & 0.639 [0.598, 0.672] \\
-2:1 & 0.596 [0.576, 0.615] & 0.551 [0.496, 0.601] & 0.651 [0.630, 0.671] \\
-3:1 & 0.600 [0.584, 0.616] & 0.578 [0.536, 0.613] & 0.655 [0.629, 0.679] \\
-4:1 & 0.589 [0.560, 0.614] & 0.521 [0.463, 0.573] & 0.655 [0.620, 0.684] \\
+\textbf{Apenas reais} & \textbf{0.649} [0.643, 0.655] & \textbf{0.642} [0.622, 0.663] & \textbf{0.733} [0.725, 0.740] \\
+1:1 & 0.657 [0.644, 0.669] & 0.648 [0.624, 0.670] & 0.732 [0.724, 0.740] \\
+2:1 & 0.655 [0.644, 0.667] & 0.663 [0.644, 0.682] & 0.733 [0.724, 0.744] \\
+3:1 & 0.645 [0.641, 0.651] & 0.638 [0.624, 0.653] & 0.734 [0.728, 0.738] \\
+4:1 & 0.660 [0.652, 0.666] & 0.676 [0.663, 0.689] & 0.736 [0.730, 0.741] \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -403,41 +412,74 @@ Regenerada por \texttt{scripts/05}.}
 \toprule
 Proporção & Wilcoxon $p_{\text{adj}}$ (AUC) & $\delta$ de Cliff & DeLong $p$ & Signif. \\
 \midrule
-1:1 & 1.000 & $-0.18$ & 0.513 & não \\
-2:1 & 1.000 & $-0.13$ & 0.151 & não \\
-3:1 & 1.000 & $+0.02$ & 0.124 & não \\
-4:1 & 1.000 & $+0.12$ & 0.349 & não \\
+1:1 & 1.000 & $-0.08$ & 0.473 & não \\
+2:1 & 1.000 & $-0.18$ & 0.738 & não \\
+3:1 & 1.000 & $+0.06$ & 0.864 & não \\
+4:1 & 1.000 & $+0.16$ & 0.978 & não \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{GAN vs. Aumento Clássico}
-Uma GAN é uma forma cara de aumentar dados, portanto uma pergunta justa (Revisor
-2) é se ela supera o aumento clássico barato. Sob o mesmo protocolo, comparamos,
-contra uma linha de base \emph{sem aumento}, (i) o aumento clássico forte
-(afim, jitter fotométrico, cutout), (ii) o sintético por GAN em 2:1 e (iii)
-ambos (Tabela~\ref{tab:augcompare}). O aumento de qualquer tipo produz apenas um
-pequeno ganho de AUC, não significativo, sobre a ausência de aumento
-($0.610\to\!\approx\!0.65$), e criticamente \textbf{o aumento por GAN ($0.650$) é
-estatisticamente indistinguível do aumento clássico ($0.649$)}---a GAN não
-compra nada que algumas transformações baratas não comprem, e combinar os dois
-não ajuda. Nenhuma comparação é significativa (Wilcoxon corrigido por Holm
-$p_\text{adj}{=}0.58$).
+\subsection{Difusão (SD1.5 + LoRA) vs GAN}
+Como comparação com um gerador de estado da arte, ajustamos por fine-tuning com
+LoRA o Stable Diffusion 1.5~\cite{rombach2022ldm,hu2022lora} nas imagens de DEV
+\emph{apenas} (seguro contra vazamento), condicionado a prompts por classe, e
+geramos um conjunto sintético (as melhores $780$/classe por LPIPS). O treinamento
+executa em uma única GPU de 8\,GB usando fp16 e checkpointing de gradiente. O
+conjunto de difusão é \textbf{mais realista} que o da GAN (FID $131.3$ benigna /
+$126.1$ maligna vs $158.7$/$171.6$ da GAN) e \textbf{mais diverso} (LPIPS mínimo
+retido $0.477$/$0.471$, isto é, novo em vez de quase-cópias), com \textbf{zero
+memorização} (Tabela~\ref{tab:diffusion}). Ainda assim, subsequentemente ele
+\textbf{continua sem ajudar}: AUC apenas com dados reais $0.733$; $1{:}1$
+$0.732$; $2{:}1$ $0.737$; $3{:}1$ $0.734$; $4{:}1$ $0.725$; todos não
+significativos (Wilcoxon corrigido por Holm $p_\text{adj}$:
+$1.000$/$1.000$/$1.000$/$0.148$). A conclusão é contundente: \textbf{melhorar a
+fidelidade do gerador não se traduz em benefício subsequente---a qualidade do
+gerador não é o gargalo}.
 
 \begin{table}[t]
 \centering
-\caption{Estratégias de aumento no conjunto TEST bloqueado (média [IC 95\%], 10
+\caption{GAN vs difusão (SD+LoRA): o gerador de difusão é mais realista e mais
+diverso, sem memorização, mas nenhuma das melhores proporções de cada gerador
+supera a AUC de TEST apenas com dados reais de $0.733$. Regenerada por
+\texttt{scripts/03--05}.}
+\label{tab:diffusion}
+\begin{tabular}{lcccc}
+\toprule
+Gerador & FID (benigna/maligna) $\downarrow$ & LPIPS mínimo & Memorizado & melhor AUC de TEST \\
+\midrule
+GAN & 158.7 / 171.6 & 0.18 & 0\% & 0.736 (4:1) \\
+Difusão (SD+LoRA) & 131.3 / 126.1 & 0.47 & 0\% & 0.737 (2:1) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{GAN vs Aumento Clássico}
+Uma GAN é uma forma cara de aumentar dados, portanto uma pergunta justa (Revisor
+2) é se ela supera o aumento clássico barato. Sob o mesmo protocolo, comparamos,
+contra uma linha de base \emph{sem aumento}, (i) o aumento clássico forte (afim,
+jitter fotométrico, cutout), (ii) o sintético por GAN em 2:1 e (iii) ambos
+(Tabela~\ref{tab:augcompare}). No conjunto TEST com poder estatístico todas as
+condições ficam dentro do ruído umas das outras: \textbf{o aumento por GAN
+($0.728$) não supera o aumento clássico ($0.736$) nem mesmo a ausência de aumento
+($0.730$)}---a GAN não compra nada que algumas transformações baratas não
+comprem, e combinar os dois não ajuda. Nenhuma comparação é significativa
+(Wilcoxon corrigido por Holm, todas n.s.).
+
+\begin{table}[t]
+\centering
+\caption{Estratégias de aumento no conjunto TEST travado (média [IC 95\%], 10
 sementes). O aumento por GAN não supera o aumento clássico; nenhuma difere
 significativamente da linha de base sem aumento.}
 \label{tab:augcompare}
-\begin{tabular}{lcccc}
+\begin{tabular}{lcc}
 \toprule
-Condição & Acurácia & F1 & AUC [IC 95\%] & vs sem-aug \\
+Condição & AUC [IC 95\%] & vs sem-aug \\
 \midrule
-Sem aumento & 0.600 & 0.578 & 0.610 [0.568, 0.650] & --- \\
-Aumento clássico & 0.577 & 0.500 & 0.649 [0.617, 0.677] & n.s. \\
-GAN 2:1 & 0.598 & 0.575 & 0.650 [0.615, 0.684] & n.s. \\
-Clássico + GAN 2:1 & 0.591 & 0.544 & 0.632 [0.590, 0.671] & n.s. \\
+Sem aumento & 0.730 [0.725, 0.735] & --- \\
+Aumento clássico & 0.736 [0.729, 0.743] & n.s. \\
+GAN 2:1 & 0.728 [0.719, 0.737] & n.s. \\
+Clássico + GAN 2:1 & 0.731 [0.724, 0.738] & n.s. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -446,11 +488,13 @@ Clássico + GAN 2:1 & 0.591 & 0.544 & 0.632 [0.590, 0.671] & n.s. \\
 Frequentemente argumenta-se que o aumento sintético ajuda mais quando os dados
 reais são escassos. Subamostramos o conjunto DEV real e comparamos apenas-real
 vs GAN 2:1 em cada tamanho (Fig.~\ref{fig:lc}). O benefício é inconsistente e
-nunca significativo: o maior ganho (ainda não significativo) ocorre em 80
-imagens/classe ($\Delta$AUC $+0.052$, delta de Cliff $=0.62$, $p{=}0.13$),
-enquanto em 120/classe ele é ligeiramente negativo e, no tamanho completo,
-desprezível ($+0.004$). Não há, portanto, regime de poucos dados no qual a GAN
-ajude de forma confiável sob avaliação rigorosa.
+nunca significativo: em $100$/classe a GAN fica ligeiramente \emph{abaixo} do
+apenas-real ($0.601$ vs $0.610$, $\Delta{=}-0.009$); a única indicação não
+significativa está em $300$/classe ($0.672$ vs $0.646$, $\Delta{=}+0.026$,
+$p{=}0.105$); em $600$/classe é novamente negativo ($0.703$ vs $0.712$,
+$\Delta{=}-0.009$); e no completo $1006$/classe é desprezível ($0.734$ vs
+$0.738$, $\Delta{=}-0.004$). Não há, portanto, regime de poucos dados confiável no
+qual a GAN ajude sob avaliação rigorosa.
 
 \begin{figure}[t]
 \centering
@@ -469,30 +513,29 @@ compatibilizado com a tarefa pela exclusão de filmes normais), usando o mesmo
 protocolo com o conjunto externo no lugar do conjunto de TEST travado
 (Tabela~\ref{tab:external}). O desfecho coincide com o interno e é novamente
 \textbf{negativo}: o modelo mal excede o acaso no MIAS (AUC apenas com dados reais
-$0.533$), e a aumentação \emph{não ajuda}---toda proporção aumentada fica no ou
-abaixo do acaso ($0.492$--$0.503$) e abaixo da linha de base apenas com dados
-reais, sem diferença significativa (Wilcoxon-Holm $p\!\ge\!0.078$). A grande
-lacuna de domínio---filme digitalizado versus mamografia digital de campo total,
-scanner e população diferentes, e subamostragem agressiva de
-$1024\!\to\!128$---significa que o modelo treinado no CBIS não transfere, e a
+$0.531$), e a aumentação \emph{não ajuda}---toda proporção aumentada fica no ou
+abaixo da linha de base apenas com dados reais ($0.513$--$0.530$), sem diferença
+significativa. A grande lacuna de domínio---filme digitalizado versus mamografia
+digital de campo total, scanner e população diferentes, e subamostragem agressiva
+de $1024\!\to\!128$---significa que o modelo treinado no CBIS não transfere, e a
 aumentação sintética não oferece robustez a isso. Isso reforça que o estudo é uma
 análise exploratória de viabilidade, não uma evidência de robustez clínica.
 
 \begin{table}[t]
 \centering
-\caption{Validação externa no MIAS (treinado no CBIS-DDSM, sem retreinamento).
-média [IC 95\%] sobre sementes. Regenerada por \texttt{scripts/06} +
-\texttt{05}.}
+\caption{Validação externa no MIAS (modelo treinado no CBIS-DDSM completo, sem
+retreinamento). Toda proporção fica no ou abaixo do acaso. Regenerada por
+\texttt{scripts/06} + \texttt{05}.}
 \label{tab:external}
-\begin{tabular}{lccc}
+\begin{tabular}{lc}
 \toprule
-Sintético:Real & Acurácia [IC 95\%] & F1 [IC 95\%] & AUC [IC 95\%] (MIAS) \\
+Sintético:Real & AUC (MIAS) \\
 \midrule
-Apenas reais & 0.542 [0.520, 0.563] & 0.455 [0.404, 0.499] & 0.533 [0.512, 0.554] \\
-1:1 & 0.519 [0.502, 0.536] & 0.347 [0.261, 0.433] & 0.497 [0.479, 0.517] \\
-2:1 & 0.514 [0.485, 0.543] & 0.394 [0.298, 0.485] & 0.503 [0.468, 0.538] \\
-3:1 & 0.509 [0.489, 0.524] & 0.390 [0.300, 0.467] & 0.492 [0.474, 0.510] \\
-4:1 & 0.522 [0.503, 0.541] & 0.325 [0.231, 0.404] & 0.500 [0.474, 0.525] \\
+Apenas reais & 0.531 \\
+1:1 & 0.530 \\
+2:1 & 0.522 \\
+3:1 & 0.521 \\
+4:1 & 0.513 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -500,71 +543,83 @@ Apenas reais & 0.542 [0.520, 0.563] & 0.455 [0.404, 0.499] & 0.533 [0.512, 0.554
 % ============================================================================
 \section{Discussão}
 % ============================================================================
-Sob o protocolo livre de vazamento, em nível de paciente, a aumentação baseada em
-GAN não oferece \textbf{nenhum benefício mensurável}: a linha de base apenas com
-dados reais é a configuração mais forte e nenhuma proporção aumentada é
-significativamente diferente dela, seja avaliada internamente ou no MIAS. Isso
-contrasta acentuadamente com o desfecho positivo que obtemos sob um protocolo mais
-fraco. Como uma ablação, reexecutamos o pipeline idêntico com divisão em
-\emph{nível de imagem} em vez de nível de paciente (de modo que visões do mesmo
-paciente podem cruzar treino e teste): isso recupera uma melhoria
-``significativa'' de AUC $0.611\!\to\!0.683$ em 2:1--3:1 (Wilcoxon corrigido por
-Holm $p_\text{adj}{=}0.047$)---o tipo de resultado comumente reportado. O ganho é,
-portanto, atribuível à \emph{metodologia}, não aos dados sintéticos: o vazamento
-do mesmo paciente através da divisão, por si só, inverte a conclusão de nula para
-significativa. Duas observações adicionais sustentam o resultado nulo: (i) o
-limiar de seleção $\tau{=}0.20$ usado anteriormente é \emph{inviável} uma vez que
-o gerador vê apenas dados que não são de avaliação (retenção benigna $<\!1\%$),
-de modo que ele mesmo era um artefato de uma configuração com mais vazamento; e
-(ii) a fidelidade do gerador é limitada (FID $\approx 200$), de modo que as
-imagens sintéticas retidas plausivelmente carecem da estrutura discriminativa
-necessária para ajudar---nas proporções mais baixas elas até tendem abaixo da
-linha de base. A comparação de estratégias de aumento aguça a mensagem prática: a
-GAN iguala, mas não supera, o aumento clássico barato (Tabela~\ref{tab:augcompare}),
-de modo que seu considerável custo de treinamento não compra acurácia; e a análise
-de poucos dados (Fig.~\ref{fig:lc}) não encontra nenhum tamanho de dados no qual a
-GAN ajude de forma confiável, contrariando a intuição comum de que os dados
-sintéticos resgatam o regime de poucas amostras. Não afirmamos que a aumentação
-sintética \emph{não possa} ajudar a
-classificação de mamografias; mostramos que, com um gerador de fidelidade moderada
-e sob avaliação rigorosa, os ganhos comumente reportados não se reproduzem, e que
-demonstrar um benefício genuíno requer tanto síntese de maior fidelidade quanto
-avaliação livre de vazamento, em nível de paciente.
+Sob o protocolo com poder estatístico, livre de vazamento e em nível de paciente,
+a aumentação sintética não oferece \textbf{nenhum benefício mensurável para
+qualquer dos geradores}: a linha de base apenas com dados reais é a configuração
+mais forte e nenhuma proporção aumentada é significativamente diferente dela,
+sejam as imagens sintéticas provenientes da GAN ou do modelo de difusão, e sejam
+avaliadas internamente ou no MIAS. O resultado mais informativo é que o gerador de
+\emph{difusão}---que é mais realista (menor FID), mais diverso e apresenta zero
+memorização---\emph{ainda assim} não produz nada subsequente. \textbf{A qualidade
+do gerador, portanto, não é o gargalo}: elevar a fidelidade da GAN para um modelo
+de difusão de estado da arte não move o classificador.
+
+A história do vazamento é \textbf{matizada}. No conjunto de dados completo e com
+poder estatístico, mesmo a divisão em \emph{nível de imagem} (vazada), na qual
+visões do mesmo paciente podem cruzar treino e teste, dá um resultado
+\textbf{nulo} (AUC apenas com dados reais $0.722$; aumentada $0.721$--$0.736$;
+todas n.s.). O ganho ``significativo'' espúrio de AUC $0.611\!\to\!0.683$ em
+2:1--3:1 (Wilcoxon corrigido por Holm $p_\text{adj}{=}0.047$) aparece
+\textbf{apenas} no pequeno subconjunto de $553$ imagens \emph{sob} divisão em
+nível de imagem. Em outras palavras, o falso positivo requer \emph{tanto} dados
+pequenos \emph{quanto} vazamento: com poder adequado ele não aparece nem mesmo sob
+a divisão vazada. Isso torna os ganhos comumente reportados recuperáveis como um
+artefato da combinação de amostra-pequena-mais-vazamento, e não dos dados
+sintéticos.
+
+A comparação de estratégias de aumento aguça a mensagem prática: a GAN iguala,
+mas não supera, o aumento clássico barato ou nem mesmo a ausência de aumento
+(Tabela~\ref{tab:augcompare}), de modo que seu considerável custo de treinamento
+não compra acurácia; e a análise de poucos dados (Fig.~\ref{fig:lc}) não encontra
+nenhum tamanho de dados no qual a GAN ajude de forma confiável, contrariando a
+intuição comum de que os dados sintéticos resgatam o regime de poucas amostras.
+Não afirmamos que a aumentação sintética \emph{não possa} ajudar a classificação
+de mamografias; mostramos que, ao longo de duas famílias de geradores e sob uma
+avaliação com poder estatístico e rigorosa, os ganhos comumente reportados não se
+reproduzem, e que melhorar a fidelidade do gerador por si só não é suficiente para
+produzir um.
 
 % ============================================================================
 \section{Limitações}
 % ============================================================================
-Este é um estudo exploratório de viabilidade que reporta um resultado negativo,
-não uma evidência de robustez clínica. (1) A \textbf{fidelidade do gerador é
-limitada} (FID $\approx 200$); nosso achado nulo é condicional a isso---um gerador
-de maior fidelidade poderia produzir imagens sintéticas que ajudem, e testar isso
-é a principal via para trabalhos futuros. (2) A resolução de $128\times128$
-descarta detalhes diagnósticos finos (margens, textura, microcalcificações) e
-restringe a qualidade do gerador. (3) A validação externa usa um \textbf{único}
-conjunto de dados adicional (MIAS, filme digitalizado); uma validação mais ampla
-multi-institucional/multi-scanner (INbreast, VinDr-Mammo) permanece como trabalho
-futuro. (4) O conjunto de dados é pequeno e tanto a AUC de linha de base quanto as
+Este estudo reporta um resultado negativo com poder estatístico, não uma
+evidência de robustez clínica. (1) O gerador de difusão é construído sobre uma
+\textbf{base Stable Diffusion 1.5 pré-treinada em imagens naturais}, de modo que
+uma \textbf{lacuna de domínio} separa seu prior da mamografia; adaptar uma base de
+difusão pré-treinada em dados \emph{médicos} é uma via natural para trabalhos
+futuros, embora nosso achado de que a fidelidade não impulsiona o benefício
+subsequente modere a expectativa de que isso mudaria a conclusão. (2) A resolução
+de $128\times128$ descarta detalhes diagnósticos finos (margens, textura,
+microcalcificações) e restringe a qualidade do gerador. (3) A validação externa
+usa um \textbf{único} conjunto de dados adicional (MIAS, filme digitalizado); uma
+validação mais ampla multi-institucional/multi-scanner (INbreast, VinDr-Mammo)
+permanece como trabalho futuro. (4) Tanto a AUC de linha de base quanto as
 aumentadas são moderadas; o modelo não é clinicamente validado, e nenhuma
-avaliação prospectiva ou por especialistas foi realizada. (5) O gerador é treinado
-uma única vez em DEV no protocolo reportado; a variante por dobra é fornecida, mas
-não executada em escala devido ao custo computacional.
+avaliação prospectiva ou por especialistas foi realizada. (5) Os geradores são
+treinados uma única vez em DEV no protocolo reportado; a variante por dobra é
+fornecida, mas não executada em escala devido ao custo computacional.
 
 % ============================================================================
 \section{Conclusão}
 % ============================================================================
-Apresentamos um protocolo livre de vazamento, em nível de paciente, para avaliar a
-aumentação sintética baseada em GAN na classificação de mamografias de câncer de
-mama, com uma etapa de seleção justificada e auditada quanto à memorização,
-reporte de FID/KID e teste estatístico completo. Sob este protocolo, a aumentação
-não oferece \textbf{nenhum benefício significativo}, interna ou externamente, e
-mostramos que os ganhos positivos reportados sob protocolos mais fracos são
-recuperáveis como artefatos de vazamento de dados e divisão em nível de imagem. A
+Apresentamos um protocolo com poder estatístico, livre de vazamento e em nível de
+paciente (TEST travado $n{=}504$) para avaliar a aumentação sintética na
+classificação de mamografias de câncer de mama, com uma etapa de seleção
+justificada e auditada quanto à memorização, reporte de FID/KID e teste
+estatístico completo, e o aplicamos a \emph{duas} famílias de geradores---um
+StyleGAN2-ADA e um Stable Diffusion 1.5 ajustado por fine-tuning com LoRA. Sob
+este protocolo, \textbf{nenhum dos geradores oferece benefício significativo},
+interna ou externamente. Surpreendentemente, o gerador de difusão é mais realista,
+mais diverso e livre de memorização, mas ainda assim não produz nada
+subsequente---portanto \textbf{a qualidade do gerador não é o gargalo}. Uma
+ablação matizada mostra que o resultado positivo reportado sob protocolos mais
+fracos requer \emph{tanto} um subconjunto pequeno \emph{quanto} vazamento em nível
+de imagem; com poder adequado ele não aparece nem mesmo sob a divisão vazada. A
 contribuição é uma demonstração cautelar e reprodutível de que o rigor da
-avaliação---não a presença de dados sintéticos---impulsiona as melhorias
-reportadas, e que um benefício genuíno exigiria tanto síntese de maior fidelidade
-quanto avaliação livre de vazamento, em nível de paciente. Trabalhos futuros:
-geradores de maior resolução e maior fidelidade; validação externa multi-scanner;
-e o protocolo por dobra em escala.
+avaliação e o poder estatístico---não a presença ou a fidelidade de dados
+sintéticos---impulsionam as melhorias reportadas. Trabalhos futuros: bases de
+difusão pré-treinadas em dados médicos; geradores de maior resolução; validação
+externa multi-scanner; e o protocolo por dobra em escala.
 
 \subsubsection*{Agradecimentos.} Os autores agradecem ao Departamento de
 Computação da Universidade Estadual de Londrina.

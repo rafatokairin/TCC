@@ -114,20 +114,24 @@ pytest -q          # proves no patient overlap / no TEST leakage; validates stat
 
 ---
 
-## Headline finding (negative result)
+## Headline finding (powered, generator-agnostic null)
 
-Under the rigorous, **patient-level, leakage-free** protocol with a fine-tuned
-classifier, GAN-based synthetic augmentation provides **no measurable benefit**:
-the real-only baseline (test AUC **0.663**) is the best configuration and no
-augmented ratio differs significantly from it (Holm-corrected Wilcoxon
-`p_adj = 1.0`); external validation on MIAS is likewise null. As an ablation,
-switching to an **image-level** split (same-patient leakage) recovers a
-"significant" 0.611 → 0.683 gain — showing the improvements commonly reported are
-methodological **artefacts**, not an effect of the synthetic data. The generator
-fidelity is limited (FID ≈ 200), so the null result is conditional on that; a
-higher-fidelity, higher-resolution generator is the main future-work avenue. The
-originally reported figures (0.651 / 0.658 / 0.703 at 2:1) came from the leaky,
-image-level setup and are **not** reused.
+Under a **powered, patient-level, leakage-free** protocol on the **full CBIS-DDSM**
+(2857 images, 1460 patients; locked TEST **n=504**), **neither a GAN nor a
+Stable-Diffusion+LoRA generator** improves classification over the real-only
+baseline (test AUC **0.733**): every augmented ratio is statistically
+indistinguishable from it (Holm-corrected Wilcoxon `p_adj = 1.0`; DeLong n.s.).
+Strikingly, the **diffusion generator is more realistic** (FID 131/126 vs the
+GAN's 159/172), **more diverse**, and shows **zero memorisation** — yet still
+gives **no benefit**, so *generator quality is not the bottleneck*. GAN
+augmentation does not beat cheap classic augmentation, and there is no low-data
+regime where it reliably helps. External validation on MIAS is likewise null
+(AUC ≈ 0.53). A **nuanced leakage ablation** shows the "positive" result requires
+*both* a small subset *and* image-level leakage (spurious 0.611 → 0.683 on the
+553-image subset); on the powered dataset even the leaky split is null. Config:
+`configs/full_cbis.yaml` (GAN) + `scripts/09_diffusion_lora.py` (diffusion, runs
+on an 8 GB RTX 4060). The earlier 553-image figures are used only for the
+leakage-sensitivity ablation.
 
 ## Data & privacy
 
