@@ -44,3 +44,5 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+data/dataset_full256/
+results_full/
