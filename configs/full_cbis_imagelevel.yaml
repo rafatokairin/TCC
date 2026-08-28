@@ -1,0 +1,61 @@
+# Statistically-powered study on the FULL CBIS-DDSM full-mammogram set
+# (~2857 images, ~1460 patients) instead of the 553-image subset. Same
+# leakage-free, patient-level protocol at 128px, but a much larger locked TEST
+# (~570 images vs 98) gives real statistical power. Feasible on an RTX 4060.
+results_dir: results_full_imagelevel
+
+data:
+  manifest: data/manifest_full.csv
+  image_root: data/dataset_full256          # 256px source; resized to 128 by transforms
+  image_size: 128
+  dedup_threshold: 4
+  balance_target_per_class: 100000           # clamps to the split's minority count
+  patient_column: image_id
+  label_column: label
+
+split:
+  protocol: holdout
+  test_size: 0.20
+  n_folds: 5
+  n_seeds: 10
+  seed: 42
+
+gan:
+  arch: stylegan2ada
+  image_size: 128
+  z_dim: 256
+  w_dim: 256
+  n_classes: 2
+  base_ch: 32
+  batch_size: 8
+  epochs: 120                                # ~same total iters as 400 epochs on the 439-image set
+  lr_g: 0.0025
+  lr_d: 0.0025
+  beta1: 0.0
+  beta2: 0.99
+  r1_gamma: 10.0
+  r1_interval: 16
+  ada_target: 0.6
+  ada_speed: 0.01
+  mixed_precision: true
+  seed: 0
+
+selection:
+  lpips_net: alex
+  threshold: 0.30
+  threshold_sweep: [0.15, 0.20, 0.25, 0.30, 0.35]
+  n_reference_reals: 150
+  memorization_eps: 0.05
+  max_attempts_factor: 50
+
+classifier:
+  arch: efficientnet_b0
+  pretrained: true
+  freeze_features: false
+  image_size: 128
+  batch_size: 32
+  epochs: 30
+  lr: 0.0001
+  early_stopping_patience: 7
+  inner_val_size: 0.2
+  ratios: [0.0, 1.0, 2.0, 3.0, 4.0]
